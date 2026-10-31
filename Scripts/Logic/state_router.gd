@@ -167,11 +167,12 @@ func create_playing_round():
 	playing_round_ui_instance = playing_round_ui.instantiate()
 	ui.add_child(playing_round_ui_instance)
 
-	playing_round_ui_instance.initialize(state_manager, phase_manager, turn_manager)
+	var promotion_manager = logic.get_system("promotion_manager")
+	playing_round_ui_instance.initialize(state_manager, phase_manager, turn_manager, promotion_manager)
 
 	board_view_instance = board_view.instantiate()
 	world.add_child(board_view_instance)
-	board_view_instance.initialize(logic.get_system("board_manager"), logic.get_system("selection_manager"), logic.get_system("move_manager"), turn_manager, logic.get_system("player_manager"))
+	board_view_instance.initialize(logic.get_system("board_manager"), logic.get_system("selection_manager"), logic.get_system("move_manager"), turn_manager, logic.get_system("player_manager"), promotion_manager)
 
 
 func destroy_playing_round():

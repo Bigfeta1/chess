@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://npx0iqhuoq01"]
+[gd_scene load_steps=10 format=3 uid="uid://npx0iqhuoq01"]
 
 [ext_resource type="Script" uid="uid://cge8x3l1wlgwv" path="res://Scripts/Logic/RoundConfigurator/round_configurator.gd" id="1_configurator"]
 [ext_resource type="Script" uid="uid://ccwm60hvl6277" path="res://Scripts/Logic/RoundConfigurator/create_state_manager_step.gd" id="3_step"]
@@ -8,6 +8,7 @@
 [ext_resource type="Script" path="res://Scripts/Logic/RoundConfigurator/create_pieces_step.gd" id="7_pieces_step"]
 [ext_resource type="Script" path="res://Scripts/Logic/RoundConfigurator/create_selection_manager_step.gd" id="8_selection_step"]
 [ext_resource type="Script" path="res://Scripts/Logic/RoundConfigurator/create_move_manager_step.gd" id="9_move_step"]
+[ext_resource type="Script" path="res://Scripts/Logic/RoundConfigurator/create_promotion_manager_step.gd" id="10_promotion_step"]
 
 [node name="RoundConfigurator" type="Node"]
 script = ExtResource("1_configurator")
@@ -29,6 +30,9 @@ script = ExtResource("6_turn_order_step")
 
 [node name="CreateMoveManager" type="Node" parent="."]
 script = ExtResource("9_move_step")
+
+[node name="CreatePromotionManager" type="Node" parent="."]
+script = ExtResource("10_promotion_step")
 
 [node name="CreateSelectionManager" type="Node" parent="."]
 script = ExtResource("8_selection_step")

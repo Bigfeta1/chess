@@ -2,8 +2,8 @@
 
 A chess game in Godot 4.5 (Forward Plus), built on a reusable game-flow template: a main menu, a setup panel, a round being assembled step by step, and a playing round.
 
-- **Working now:** boot to the main menu, press NEW GAME, press BEGIN. The round configurator builds the board, the two players and all 32 pieces, and the playing round shows a 3D board with sprite pieces. You can click a piece of the side to move to select it. Its square is highlighted, along with the squares it can move to (green) and the squares it targets but may not enter (red). Every piece moves: click a highlighted green square and the piece goes there. Moving onto an enemy piece captures it, and captured pieces line up beside the board. Press F5 to toggle the tactical view, which tints every square the side to move threatens.
-- **Not built yet:** check, en passant, promotion, and game end. The END TURN button does nothing, so it is always white's turn.
+- **Working now:** boot to the main menu, press NEW GAME, press BEGIN. The round configurator builds the board, the two players and all 32 pieces, and the playing round shows a 3D board with sprite pieces. You can click a piece of the side to move to select it. Its square is highlighted, along with the squares it can move to (green) and the squares it targets but may not enter (red). Every piece moves: click a highlighted green square and the piece goes there. Moving onto an enemy piece captures it, and captured pieces line up beside the board. A pawn that reaches its last rank is promoted: a panel offers queen, rook, bishop or knight, and the pawn becomes the chosen piece. Press F5 to toggle the tactical view, which tints every square the side to move threatens.
+- **Not built yet:** check, en passant, and game end. The END TURN button does nothing, so it is always white's turn.
 
 ## Project layout
 
@@ -15,14 +15,14 @@ Scenes are grouped by game state. Scripts are split into three trees that mirror
 | `Scenes/main_scene.tscn` | The entry scene: `StateRouter`, `Logic`, `UI`, `3D`. |
 | `Scenes/MainMenu/Core/` | `main_menu_logic.tscn` and `main_menu_ui.tscn`. |
 | `Scenes/MainMenu/Panels/` | `round_config_panel.tscn`, the game setup panel. |
-| `Scenes/ConfigureRound/` | Everything built while a round is assembled: `round_config.tscn`, `round_configurator_logic.tscn`, `round_configurator_ui.tscn`, and the system scenes the steps create (`state_manager.tscn`, `board_manager.tscn`, `player_manager.tscn`, `move_manager.tscn`, `selection_manager.tscn`). |
-| `Scenes/PlayingRound/` | `playing_round_logic.tscn`, `playing_round_ui.tscn`, and the 3D scenes `board_view.tscn` and `piece_view.tscn`. |
+| `Scenes/ConfigureRound/` | Everything built while a round is assembled: `round_config.tscn`, `round_configurator_logic.tscn`, `round_configurator_ui.tscn`, and the system scenes the steps create (`state_manager.tscn`, `board_manager.tscn`, `player_manager.tscn`, `move_manager.tscn`, `promotion_manager.tscn`, `selection_manager.tscn`). |
+| `Scenes/PlayingRound/` | `playing_round_logic.tscn`, `playing_round_ui.tscn`, `promotion_panel.tscn`, and the 3D scenes `board_view.tscn` and `piece_view.tscn`. |
 | `Scripts/Autoload/` | `game_state.gd`, the top-level state machine. |
 | `Scripts/MainScene/` | `main_scene.gd` (startup) and `logic.gd` (the system registry). |
 | `Scripts/Logic/` | `state_router.gd`, `round_config.gd`, and one folder per area: `MainMenu/`, `RoundConfigurator/`, `PlayingRound/`. |
-| `Scripts/Logic/PlayingRound/` | Round systems: `Board/`, `Players/`, `Pieces/` (with `Types/`), `Movement/`, `Selection/`, plus the turn and phase managers. |
+| `Scripts/Logic/PlayingRound/` | Round systems: `Board/`, `Players/`, `Pieces/` (with `Types/`), `Movement/`, `Promotion/`, `Selection/`, plus the turn and phase managers. |
 | `Scripts/UI/` | 2D UI scripts, one folder per area: `MainMenu/`, `ConfigureRound/`, `PlayingRound/`. |
-| `Scripts/World/PlayingRound/` | 3D view scripts: `board_view.gd`, `board_input.gd`, `piece_view.gd`, `piece_motion.gd`, `slide_envelope.gd`, `sprite_bounds.gd`. |
+| `Scripts/World/PlayingRound/` | 3D view scripts: `board_view.gd`, `board_input.gd`, `piece_view.gd`, `piece_motion.gd`, `piece_sprites.gd`, `slide_envelope.gd`, `sprite_bounds.gd`. |
 | `Assets/Pieces/` | Piece sprites, one folder per colour. See [Piece sprites](#piece-sprites). |
 
 Two scripts sit outside this layout: `Scenes/MainMenu/Buttons/new_game_button.gd` lives beside the scenes, and `Scripts/MainMenu/Panels/begin_button.gd` lives in a `MainMenu` folder at the scripts root.
@@ -69,6 +69,7 @@ Systems in the registry:
 | `board_manager` | `CreateBoardManager` step | `logic.clear()` on `MAIN_MENU` |
 | `player_manager` | `CreatePlayerManager` step | `logic.clear()` on `MAIN_MENU` |
 | `move_manager` | `CreateMoveManager` step | `logic.clear()` on `MAIN_MENU` |
+| `promotion_manager` | `CreatePromotionManager` step | `logic.clear()` on `MAIN_MENU` |
 | `selection_manager` | `CreateSelectionManager` step | `logic.clear()` on `MAIN_MENU` |
 | `playing_round` | Router, on `PLAYING_ROUND` | `logic.clear()` on `MAIN_MENU` |
 
@@ -154,7 +155,8 @@ The round configurator runs a list of steps in order to build the systems a roun
 | 4 | `CreatePieces` | `create_pieces_step.gd` | Creates the 32 starting pieces, gives each to its player and places it on its starting square. |
 | 5 | `AddPlayersToTurnOrder` | `add_players_to_turn_order_step.gd` | Adds white then black to `TurnManager` and starts the first turn (white). |
 | 6 | `CreateMoveManager` | `create_move_manager_step.gd` | Instantiates `move_manager.tscn`, registers it as `move_manager`, and gives it the board and player managers. |
-| 7 | `CreateSelectionManager` | `create_selection_manager_step.gd` | Instantiates `selection_manager.tscn`, registers it as `selection_manager`, and gives it the turn, player and move managers. |
+| 7 | `CreatePromotionManager` | `create_promotion_manager_step.gd` | Instantiates `promotion_manager.tscn`, registers it as `promotion_manager`, and gives it the board, player and move managers. |
+| 8 | `CreateSelectionManager` | `create_selection_manager_step.gd` | Instantiates `selection_manager.tscn`, registers it as `selection_manager`, and gives it the turn, player, move and promotion managers. |
 
 **How it runs.**
 
@@ -205,7 +207,7 @@ Every piece extends one base script, so each piece type keeps its own movement r
   The base turns these into `get_moves(board_manager)` (targets that pass `can_move_to`) and `get_blocked_moves(board_manager)` (targets that fail it). The base versions of both overrides return nothing.
 - **Types:** `Pieces/Types/` has `king.gd`, `queen.gd`, `rook.gd`, `bishop.gd`, `knight.gd` and `pawn.gd`. Each extends the base by path and sets its `piece_type` in `_init()`.
   - **Knight** (done): targets the eight L-shaped jumps that land on the board (`OFFSETS`); pieces in between do not block it. A move is blocked only if the square holds a friendly piece.
-  - **Pawn** (done): targets one square forward, plus two forward while `has_moved` is false. Forward is +1 rank for white and −1 for black (`get_forward()`). A straight move is blocked if the target or any square between it and the pawn holds a piece of either colour. It also targets each diagonal-forward square that holds an enemy piece, and captures there; empty diagonals are not targets, so they are not highlighted. En passant and promotion are not built; a pawn on the last rank has no straight targets.
+  - **Pawn** (done): targets one square forward, plus two forward while `has_moved` is false. Forward is +1 rank for white and −1 for black (`get_forward()`). A straight move is blocked if the target or any square between it and the pawn holds a piece of either colour. It also targets each diagonal-forward square that holds an enemy piece, and captures there; empty diagonals are not targets, so they are not highlighted. `get_last_rank()` is rank 8 for white and rank 1 for black; `is_on_last_rank()` tells the promotion manager when to promote (see [Promotion](#promotion)). En passant is not built.
   - **Bishop** (done): slides along the four diagonals (`DIRECTIONS`) using `get_sliding_targets`. A move is blocked only if the square holds a friendly piece. A bishop never changes square colour, so it does not track it; `square.is_light` gives the colour when needed.
   - **Rook** (done): slides along its file and rank (`DIRECTIONS`) using `get_sliding_targets`. A move is blocked only if the square holds a friendly piece. `has_moved` is already set after its first move, which castling will need.
   - **Queen** (done): slides along its file, rank and both diagonals (eight `DIRECTIONS`) using `get_sliding_targets`. A move is blocked only if the square holds a friendly piece.
@@ -223,7 +225,7 @@ Every piece extends one base script, so each piece type keeps its own movement r
 **Companion moves.** `get_companion_move(target_square, board_manager)` returns a second piece that moves with this one, as `{ "piece", "square" }`, or `{}`. The base returns `{}`; the king uses it for castling.
 
 **Threats.** `get_threatened_squares(board_manager)` returns the squares a piece would capture on: empty squares and squares holding an enemy, never squares holding a friendly piece or behind a blocker. The base returns `get_moves()`, which is right for every type except the pawn. The pawn overrides it to return its two diagonal-forward squares (empty or enemy) and not the squares straight ahead. `player.get_threatened_squares(board_manager)` combines the threats of all that player's pieces on the board.
-- **Creation:** `create_pieces_step.gd` maps each `PieceType` to its script in `PIECE_SCRIPTS` and creates a piece with `PIECE_SCRIPTS[type].new()`, which runs the subclass `_init()`. Pieces are named after their type and starting square, e.g. `Pawn_e2`, `King_e8`. White starts on ranks 1–2, black on ranks 7–8.
+- **Creation:** `piece_factory.gd` (`Pieces/`) maps each `PieceType` to its script in `PIECE_SCRIPTS`. `PieceFactory.create(type, team, notation)` makes a piece with `PIECE_SCRIPTS[type].new()` (which runs the subclass `_init()`), sets its team and names it; it does not place it or give it to a player. `create_pieces_step.gd` and the promotion manager both use it. Pieces are named after their type and starting square, e.g. `Pawn_e2`, `King_e8`. White starts on ranks 1–2, black on ranks 7–8.
 
 ### Turns and phases
 
@@ -240,11 +242,21 @@ Every piece extends one base script, so each piece type keeps its own movement r
 - `move_piece(piece, square)` moves the piece only if `square` is in `piece.get_moves(board_manager)`; otherwise it returns `false` and nothing changes. It reads `piece.get_companion_move()` first, while the piece still stands on its square. If the square holds an enemy piece, that piece is captured (see below). Then `place()` puts the piece on the square with `board_manager.place_piece`, sets `has_moved` and emits `piece_moved(piece, from_square, to_square)`. If there is a companion move (the rook when castling), it is placed the same way, with its own `piece_moved`. Returns `true`.
 - **Capturing** (`capture(capturing_piece, captured_piece)`): the captured piece is taken off the board (`board_manager.remove_piece`), removed from its owner (`remove_piece`), and given to the capturing player (`add_captured`). After `piece_moved`, the manager emits `piece_captured(captured_piece, capturing_piece, capturing_player)`.
 
+### Promotion
+
+`promotion_manager.gd` (`Scripts/Logic/PlayingRound/Promotion/`) turns a pawn on its last rank into another piece.
+
+- `initialize(board_manager, player_manager, move_manager)`. It listens to `move_manager.piece_moved`.
+- When a pawn lands on its last rank (`pawn.is_on_last_rank()`), that pawn becomes `pending_pawn` and `promotion_started(pawn)` is emitted. This covers straight moves and captures. `is_pending()` reads it.
+- `promote(type)` does nothing unless a promotion is pending and `type` is in `CHOICES` (queen, rook, bishop, knight, in the order offered). Otherwise it takes the pawn off the board and away from its player, creates the new piece with `PieceFactory`, sets its `has_moved` (so a promoted rook cannot castle), gives it to the same player, places it on the pawn's square, emits `piece_promoted(pawn, new_piece)`, then frees the pawn.
+- While a promotion is pending, the selection manager ignores every click, so the player must choose before anything else happens.
+
 ### Selection manager
 
 `selection_manager.gd` (`Scripts/Logic/PlayingRound/Selection/`) holds the selected piece.
 
-- `initialize(turn_manager, player_manager, move_manager)`.
+- `initialize(turn_manager, player_manager, move_manager, promotion_manager)`.
+- While `promotion_manager.is_pending()`, `select_square` does nothing.
 - With a piece selected, `select_square(square)` first asks `move_manager.move_piece(selected_piece, square)`. If the piece moved, the selection is cleared. Otherwise it falls through to selecting:
 - `select_square(square)` selects the piece on that square if it belongs to the player whose turn it is. Clicking the selected piece again, an empty square, an opponent's piece, or off the board clears the selection.
 - `can_select(piece)` is the turn check. `clear_selection()` clears it.
@@ -255,11 +267,12 @@ Every piece extends one base script, so each piece type keeps its own movement r
 The playing round does not own its systems. It receives the registry, and its UI and 3D view are wired to the systems the configurator built.
 
 - **Logic (`playing_round_logic.tscn`).** `PlayingRound` → `EventCoordinators` → `GameInitializer`. The router calls `playing_round.initialize(logic)`, which passes the registry down. `GameInitializer` only stores it.
-- **UI (`playing_round_ui.tscn`).** The router calls `initialize(state_manager, phase_manager, turn_manager)`. The root `Control` has `mouse_filter` set to Ignore so clicks reach the 3D board.
+- **UI (`playing_round_ui.tscn`).** The router calls `initialize(state_manager, phase_manager, turn_manager, promotion_manager)`. The root `Control` has `mouse_filter` set to Ignore so clicks reach the 3D board.
   - `PhaseLabel` shows the current phase name and updates on `phase_changed`.
   - `TurnLabel` shows the current player id ("white") on `initialize` and on `turn_changed`.
   - The END TURN button stores the state manager. Pressing it does nothing yet.
-- **3D (`board_view.tscn`).** The router adds it under `3D` and calls `initialize(board_manager, selection_manager, move_manager, turn_manager, player_manager)`. See below.
+  - `PromotionPanel` (`promotion_panel.tscn`, `promotion_panel.gd`) is hidden until `promotion_started`. It then fills `Panel/Margin/Content/Choices` with one button per `CHOICES` entry, each showing that team's piece image cropped to its solid pixels (`sprite_bounds.gd`), at `button_size` (96×96). Pressing one calls `promotion_manager.promote(type)`; on `piece_promoted` the panel hides and empties. Its root is full-screen with `mouse_filter` Ignore; the centred `Panel` blocks clicks under it.
+- **3D (`board_view.tscn`).** The router adds it under `3D` and calls `initialize(board_manager, selection_manager, move_manager, turn_manager, player_manager, promotion_manager)`. See below.
 - **Teardown.** On `MAIN_MENU` the router frees the UI and the board view. `logic.clear()` frees the playing round logic and every round system.
 
 ## 3D board view
@@ -286,6 +299,8 @@ The playing round does not own its systems. It receives the registry, and its UI
 **Tactical view.** The `tactical_view` input action (F5) toggles it. While it is on, every square in the current player's `get_threatened_squares()` is tinted: empty squares toward `threat_color` (orange) and squares holding an enemy piece toward `threatened_piece_color` (red). Tints are mixed into the square's own colour by `threat_strength` and `threatened_piece_strength`, so the light and dark pattern still shows. The view recomputes on toggle, after every move, and on `turn_changed`. A selected piece's highlights draw over the tints and the tints return when the selection clears.
 
 **Captured lines.** On `move_manager.piece_captured`, the captured piece's view stops being clickable, waits for the capturing piece's move to finish (`get_move_duration()`), then moves to its place in the capturing player's line and shrinks to `captured_scale`. Pieces already in the line move at the same time to make room, so a new pawn slides in after the other pawns and pushes later groups along. `get_captured_positions(player)` lays the line out along the board's width from the a-file side: `captured_spacing` between pieces of the same type, `captured_group_spacing` before a new type. The camera views from white's side, so white's line runs in front of rank 1 (`captured_margin_front` squares out) and black's behind rank 8 (`captured_margin_back`, further out so the back-rank pieces do not hide it).
+
+**Promotion.** On `promotion_manager.piece_promoted`, the pawn's view is freed and a view for the new piece is created on its square (`add_piece_view`), then the tactical view is recomputed. The new view appears at once; if the pawn's slide had not finished, it does not finish.
 
 **Moving pieces.** On `move_manager.piece_moved`, the board view calls `move_to(piece_position(square))` on the piece's view (`piece_position` is the square centre at y = 0), which animates it there. See [Piece motion](#piece-motion).
 
@@ -314,7 +329,7 @@ All three stay hidden or disabled if the piece has no image.
 
 **How a piece is drawn:**
 
-1. **Image.** Loaded from `Assets/Pieces/<Team>/<team>_<type>.png`. If the file does not exist, nothing is shown.
+1. **Image.** Loaded from `Assets/Pieces/<Team>/<team>_<type>.png` (`piece_sprites.gd` builds the path; the promotion panel uses it too). If the file does not exist, nothing is shown.
 2. **Measure.** `sprite_bounds.gd` measures the image's solid pixels (alpha ≥ 0.5) on a copy scaled to 256 px tall and caches the result per file. It returns the solid area, the base's half-width (widest row in the bottom 15% of the piece) and the base's horizontal centre.
 3. **Crop and scale.** The sprite draws only the solid area (`region_rect`), scaled so the piece is `king_height × HEIGHT_RATIOS[type]` tall. Empty space around the piece in the image has no effect.
 4. **Anchor.** The sprite is offset so the bottom of the base sits on the node origin, and shifted sideways so the base's centre (not the image's) is over it. The billboard pivots around this point.

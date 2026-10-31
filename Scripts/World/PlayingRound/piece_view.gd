@@ -7,8 +7,7 @@ extends Node3D
 
 const Piece = preload("res://Scripts/Logic/PlayingRound/Pieces/piece.gd")
 const SpriteBounds = preload("res://Scripts/World/PlayingRound/sprite_bounds.gd")
-const PlayerManager = preload("res://Scripts/Logic/PlayingRound/Players/player_manager.gd")
-const SPRITE_PATH := "res://Assets/Pieces/%s/%s_%s.png"
+const PieceSprites = preload("res://Scripts/World/PlayingRound/piece_sprites.gd")
 
 # Every sprite image is framed to fill its canvas, so the image itself says
 # nothing about how tall the piece is. Heights come from here instead:
@@ -156,6 +155,4 @@ func should_flip() -> bool:
 	return piece.square.file >= 4
 
 func get_sprite_path() -> String:
-	var team_name = String(PlayerManager.Team.find_key(piece.team)).to_lower()
-	var type_name = String(piece.PieceType.find_key(piece.piece_type)).to_lower()
-	return SPRITE_PATH % [team_name.capitalize(), team_name, type_name]
+	return PieceSprites.get_sprite_path(piece.team, piece.piece_type)

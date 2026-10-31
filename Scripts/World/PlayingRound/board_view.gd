@@ -6,6 +6,7 @@ extends Node3D
 # and moves piece views when the move manager moves a piece.
 # Captured pieces line up beside the board: white's captures in front of
 # rank 1, black's behind rank 8, in the capturing player's captured order.
+# A promoted pawn's view is replaced by a view of the piece it became.
 # The tactical view (toggled by the tactical_view action, F5) tints every
 # square the current player's pieces threaten.
 # Square colours are layered: selection highlights, then tactical view
@@ -51,6 +52,7 @@ var selection_manager
 var move_manager
 var turn_manager
 var player_manager
+var promotion_manager
 var square_views := {}
 var piece_views := {}
 
@@ -68,12 +70,13 @@ var selection_highlights := {}
 var threat_highlights := {}
 var tactical_view := false
 
-func initialize(board_mngr, selection_mngr, move_mngr, turn_mngr, player_mngr) -> void:
+func initialize(board_mngr, selection_mngr, move_mngr, turn_mngr, player_mngr, promotion_mngr) -> void:
 	board_manager = board_mngr
 	selection_manager = selection_mngr
 	move_manager = move_mngr
 	turn_manager = turn_mngr
 	player_manager = player_mngr
+	promotion_manager = promotion_mngr
 
 	build_board()
 	build_pieces()
@@ -86,18 +89,31 @@ func initialize(board_mngr, selection_mngr, move_mngr, turn_mngr, player_mngr) -
 	move_manager.piece_captured.connect(_on_piece_captured)
 	board_input.tactical_view_toggled.connect(_on_tactical_view_toggled)
 	turn_manager.turn_changed.connect(_on_turn_changed)
+	promotion_manager.piece_promoted.connect(_on_piece_promoted)
 
 func build_pieces() -> void:
 	for square in board_manager.squares.values():
-		if square.is_empty():
-			continue
+		if not square.is_empty():
+			add_piece_view(square.piece)
 
-		var view = piece_view.instantiate()
-		view.name = square.piece.name
-		pieces_root.add_child(view)
-		view.position = piece_position(square)
-		view.initialize(square.piece)
-		piece_views[square.piece] = view
+# Creates the view for a piece standing on the board.
+func add_piece_view(piece) -> void:
+	var view = piece_view.instantiate()
+	view.name = piece.name
+	pieces_root.add_child(view)
+	view.position = piece_position(piece.square)
+	view.initialize(piece)
+	piece_views[piece] = view
+
+# The pawn's view goes; the new piece appears on the pawn's square.
+func _on_piece_promoted(pawn, new_piece) -> void:
+	var old_view = piece_views[pawn]
+	piece_views.erase(pawn)
+	pieces_root.remove_child(old_view)
+	old_view.queue_free()
+
+	add_piece_view(new_piece)
+	update_threats()
 
 func build_board() -> void:
 	var mesh = BoxMesh.new()

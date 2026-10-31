@@ -5,16 +5,7 @@ extends Node
 
 const Piece = preload("res://Scripts/Logic/PlayingRound/Pieces/piece.gd")
 const PlayerManager = preload("res://Scripts/Logic/PlayingRound/Players/player_manager.gd")
-
-# One script per piece type; each extends piece.gd.
-const PIECE_SCRIPTS = {
-	Piece.PieceType.KING: preload("res://Scripts/Logic/PlayingRound/Pieces/Types/king.gd"),
-	Piece.PieceType.QUEEN: preload("res://Scripts/Logic/PlayingRound/Pieces/Types/queen.gd"),
-	Piece.PieceType.ROOK: preload("res://Scripts/Logic/PlayingRound/Pieces/Types/rook.gd"),
-	Piece.PieceType.BISHOP: preload("res://Scripts/Logic/PlayingRound/Pieces/Types/bishop.gd"),
-	Piece.PieceType.KNIGHT: preload("res://Scripts/Logic/PlayingRound/Pieces/Types/knight.gd"),
-	Piece.PieceType.PAWN: preload("res://Scripts/Logic/PlayingRound/Pieces/Types/pawn.gd")
-}
+const PieceFactory = preload("res://Scripts/Logic/PlayingRound/Pieces/piece_factory.gd")
 
 const BACK_RANK = [
 	Piece.PieceType.ROOK,
@@ -47,8 +38,6 @@ func run(configurator):
 			create_piece(Piece.PieceType.PAWN, player, board_manager, board_manager.to_notation(file, pawn_rank))
 
 func create_piece(type, player, board_manager, notation: String) -> void:
-	var piece = PIECE_SCRIPTS[type].new()
-	piece.initialize(player.team)
-	piece.name = piece.get_type_name() + "_" + notation
+	var piece = PieceFactory.create(type, player.team, notation)
 	player.add_piece(piece)
 	board_manager.place_piece(piece, notation)

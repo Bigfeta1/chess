@@ -15,6 +15,14 @@ func _init() -> void:
 func get_forward() -> int:
 	return 1 if team == PlayerManager.Team.WHITE else -1
 
+# Rank index the pawn promotes on: 7 (rank 8) for white, 0 (rank 1) for black.
+func get_last_rank(board_manager) -> int:
+	return board_manager.BOARD_SIZE - 1 if team == PlayerManager.Team.WHITE else 0
+
+# Whether the pawn stands on its last rank and must be promoted.
+func is_on_last_rank(board_manager) -> bool:
+	return square != null and square.rank == get_last_rank(board_manager)
+
 # One square forward, plus two squares forward if the pawn has not moved yet,
 # plus each diagonal-forward square that holds an enemy piece.
 func get_target_squares(board_manager) -> Array:

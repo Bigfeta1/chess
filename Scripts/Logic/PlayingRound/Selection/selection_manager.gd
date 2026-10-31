@@ -3,19 +3,22 @@ extends Node
 # Holds the currently selected piece. Only pieces belonging to the player
 # whose turn it is can be selected. Selection is cleared when the turn changes.
 # With a piece selected, clicking one of its moves asks the move manager to move it.
+# While a pawn promotion is pending, clicks are ignored.
 
 signal selection_changed(piece)
 
 var turn_manager
 var player_manager
 var move_manager
+var promotion_manager
 
 var selected_piece = null
 
-func initialize(turn_mngr, player_mngr, move_mngr) -> void:
+func initialize(turn_mngr, player_mngr, move_mngr, promotion_mngr) -> void:
 	turn_manager = turn_mngr
 	player_manager = player_mngr
 	move_manager = move_mngr
+	promotion_manager = promotion_mngr
 	turn_manager.turn_changed.connect(_on_turn_changed)
 
 # Called when a square is clicked. If a piece is selected and the square is
@@ -23,6 +26,9 @@ func initialize(turn_mngr, player_mngr, move_mngr) -> void:
 # Otherwise selects the piece on the square if it belongs to the current
 # player; clicking the selected piece again, or anything else, clears the selection.
 func select_square(square) -> void:
+	if promotion_manager.is_pending():
+		return
+
 	if selected_piece != null and move_manager.move_piece(selected_piece, square):
 		clear_selection()
 		return
