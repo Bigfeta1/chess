@@ -171,7 +171,7 @@ func create_playing_round():
 
 	board_view_instance = board_view.instantiate()
 	world.add_child(board_view_instance)
-	board_view_instance.initialize(logic.get_system("board_manager"), logic.get_system("selection_manager"), logic.get_system("move_manager"))
+	board_view_instance.initialize(logic.get_system("board_manager"), logic.get_system("selection_manager"), logic.get_system("move_manager"), turn_manager, logic.get_system("player_manager"))
 
 
 func destroy_playing_round():

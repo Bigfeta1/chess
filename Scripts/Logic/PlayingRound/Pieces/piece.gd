@@ -36,6 +36,19 @@ func get_target_squares(_board_manager) -> Array:
 func can_move_to(_target_square, _board_manager) -> bool:
 	return false
 
+# Squares this piece threatens: where it would capture an enemy piece.
+# Empty squares count, as do squares holding an enemy; squares behind a
+# piece and squares holding a friendly piece do not. For most pieces this
+# is the same as their moves; pawns override it.
+func get_threatened_squares(board_manager) -> Array:
+	return get_moves(board_manager)
+
+# A second piece that moves as part of moving this piece to target_square,
+# as { "piece": ..., "square": ... }, or an empty dictionary for none.
+# Only the king uses this, for the rook when castling.
+func get_companion_move(_target_square, _board_manager) -> Dictionary:
+	return {}
+
 # Shared helper for sliding pieces (bishop, rook, queen).
 # Walks from the piece's square along each direction (file step, rank step)
 # and collects every square up to and including the first occupied one.

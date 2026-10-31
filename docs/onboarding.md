@@ -2,8 +2,8 @@
 
 A chess game in Godot 4.5 (Forward Plus), built on a reusable game-flow template: a main menu, a setup panel, a round being assembled step by step, and a playing round.
 
-- **Working now:** boot to the main menu, press NEW GAME, press BEGIN. The round configurator builds the board, the two players and all 32 pieces, and the playing round shows a 3D board with sprite pieces. You can click a piece of the side to move to select it. Its square is highlighted, along with the squares it can move to (green) and the squares it targets but may not enter (red). Every piece moves: click a highlighted green square and the piece goes there.
-- **Not built yet:** capturing, check, castling, en passant, promotion, and game end. The END TURN button does nothing, so it is always white's turn.
+- **Working now:** boot to the main menu, press NEW GAME, press BEGIN. The round configurator builds the board, the two players and all 32 pieces, and the playing round shows a 3D board with sprite pieces. You can click a piece of the side to move to select it. Its square is highlighted, along with the squares it can move to (green) and the squares it targets but may not enter (red). Every piece moves: click a highlighted green square and the piece goes there. Moving onto an enemy piece captures it, and captured pieces line up beside the board. Press F5 to toggle the tactical view, which tints every square the side to move threatens.
+- **Not built yet:** check, en passant, promotion, and game end. The END TURN button does nothing, so it is always white's turn.
 
 ## Project layout
 
@@ -11,7 +11,7 @@ Scenes are grouped by game state. Scripts are split into three trees that mirror
 
 | Path | What lives there |
 | --- | --- |
-| `project.godot` | Main scene is `Scenes/main_scene.tscn`. One autoload: `GameState`. |
+| `project.godot` | Main scene is `Scenes/main_scene.tscn`. One autoload: `GameState`. One input action: `tactical_view` (F5). |
 | `Scenes/main_scene.tscn` | The entry scene: `StateRouter`, `Logic`, `UI`, `3D`. |
 | `Scenes/MainMenu/Core/` | `main_menu_logic.tscn` and `main_menu_ui.tscn`. |
 | `Scenes/MainMenu/Panels/` | `round_config_panel.tscn`, the game setup panel. |
@@ -153,7 +153,7 @@ The round configurator runs a list of steps in order to build the systems a roun
 | 3 | `CreatePlayerManager` | `create_player_manager_step.gd` | Instantiates `player_manager.tscn` (white and black) and registers it as `player_manager`. |
 | 4 | `CreatePieces` | `create_pieces_step.gd` | Creates the 32 starting pieces, gives each to its player and places it on its starting square. |
 | 5 | `AddPlayersToTurnOrder` | `add_players_to_turn_order_step.gd` | Adds white then black to `TurnManager` and starts the first turn (white). |
-| 6 | `CreateMoveManager` | `create_move_manager_step.gd` | Instantiates `move_manager.tscn`, registers it as `move_manager`, and gives it the board manager. |
+| 6 | `CreateMoveManager` | `create_move_manager_step.gd` | Instantiates `move_manager.tscn`, registers it as `move_manager`, and gives it the board and player managers. |
 | 7 | `CreateSelectionManager` | `create_selection_manager_step.gd` | Instantiates `selection_manager.tscn`, registers it as `selection_manager`, and gives it the turn, player and move managers. |
 
 **How it runs.**
@@ -174,6 +174,8 @@ All of these are plain `Node`s under `Logic`, built by configurator steps and fr
 `board_manager.gd` (`Scripts/Logic/PlayingRound/Board/`) owns the 64 squares.
 
 - On `_ready` it creates one square node per square as children, named `a1` to `h8`, and indexes them in `squares` by name.
+- `remove_piece(piece)` takes a piece off the board and clears both sides of the link.
+- `is_threatened(square, by_team)` returns whether any piece of that team on the board threatens the square (see [Threats](#pieces)).
 - `get_square("e4")` looks a square up by name. `get_square_at(file, rank)` looks it up by index (0–7 each, `0, 0` is a1) and returns `null` off the board. `is_on_board(file, rank)` and `to_notation(file, rank)` are helpers.
 - `place_piece(piece, "e4")` puts a piece on an empty square and keeps both sides linked (`square.piece` and `piece.square`). If the piece was on another square, that square is cleared. It does nothing if the target is occupied.
 
@@ -189,6 +191,7 @@ Each player (`player.gd`) holds `player_id`, `team`, `is_human` (always `true` f
 
 - `pieces` lists the player's pieces. The pieces are also children of the player node, so the player owns them in the tree.
 - `add_piece(piece)` and `remove_piece(piece)` emit `piece_added` and `piece_removed`. `has_piece(piece)` and `get_pieces_of_type(type)` read the list.
+- `captured_pieces` lists the enemy pieces this player has captured. They are also children of the player node. `add_captured(piece)` inserts a piece after the last captured piece of its group and emits `piece_captured`. Groups follow `CAPTURE_ORDER`: pawns, knights, bishops, rooks, queens; a type not listed (the king, which can be captured while check is not built) goes last. So capturing a pawn, then a knight, then a pawn gives pawn, pawn, knight.
 
 ### Pieces
 
@@ -202,15 +205,24 @@ Every piece extends one base script, so each piece type keeps its own movement r
   The base turns these into `get_moves(board_manager)` (targets that pass `can_move_to`) and `get_blocked_moves(board_manager)` (targets that fail it). The base versions of both overrides return nothing.
 - **Types:** `Pieces/Types/` has `king.gd`, `queen.gd`, `rook.gd`, `bishop.gd`, `knight.gd` and `pawn.gd`. Each extends the base by path and sets its `piece_type` in `_init()`.
   - **Knight** (done): targets the eight L-shaped jumps that land on the board (`OFFSETS`); pieces in between do not block it. A move is blocked only if the square holds a friendly piece.
-  - **Pawn** (done): targets one square forward, plus two forward while `has_moved` is false. Forward is +1 rank for white and −1 for black (`get_forward()`). A move is blocked if the target or any square between it and the pawn holds a piece of either colour. Diagonal captures, en passant and promotion are not built; a pawn on the last rank has no targets.
+  - **Pawn** (done): targets one square forward, plus two forward while `has_moved` is false. Forward is +1 rank for white and −1 for black (`get_forward()`). A straight move is blocked if the target or any square between it and the pawn holds a piece of either colour. It also targets each diagonal-forward square that holds an enemy piece, and captures there; empty diagonals are not targets, so they are not highlighted. En passant and promotion are not built; a pawn on the last rank has no straight targets.
   - **Bishop** (done): slides along the four diagonals (`DIRECTIONS`) using `get_sliding_targets`. A move is blocked only if the square holds a friendly piece. A bishop never changes square colour, so it does not track it; `square.is_light` gives the colour when needed.
   - **Rook** (done): slides along its file and rank (`DIRECTIONS`) using `get_sliding_targets`. A move is blocked only if the square holds a friendly piece. `has_moved` is already set after its first move, which castling will need.
   - **Queen** (done): slides along its file, rank and both diagonals (eight `DIRECTIONS`) using `get_sliding_targets`. A move is blocked only if the square holds a friendly piece.
-  - **King** (done): targets the eight neighbouring squares that are on the board (`OFFSETS`). A move is blocked only if the square holds a friendly piece. It can step into check, since check is not built. `has_moved` is already set after its first move, which castling will need.
+  - **King** (done): targets the eight neighbouring squares that are on the board (`OFFSETS`). A step is blocked only if the square holds a friendly piece. It can step onto a threatened square, since check is not built.
+  - **Castling** (in `king.gd`): moves the king two squares toward a rook and the rook to the square the king crossed. Kingside: king to g, rook h to f. Queenside: king to c, rook a to d (`CASTLING`).
+	- **Target:** the castling square is a target only while the king and that corner's rook have never moved (`has_moved`), the corner holds a friendly rook (`get_castling_rook`), and none of the king's own pieces stand between them (`has_friendly_between`). Otherwise it is not shown at all, to keep the board readable.
+	- **Allowed** (`can_castle`) only if every square between the king and the rook is empty, and no opponent piece threatens the king's square, the square it crosses, or the square it lands on (`board_manager.is_threatened`). Queenside the b-file square must be empty but may be threatened, because the king never crosses it. A target that fails these (an enemy piece in between, or a threatened square) shows as blocked (red).
+	- **The rook moves too:** `get_companion_move(target, board_manager)` returns the rook and its square; `move_manager` moves it after the king.
+	- **Threats:** the king overrides `get_threatened_squares` to return only its neighbours (castling never captures). This is also what stops two kings asking each other about castling without end.
 
 **Sliding helper.** `get_sliding_targets(board_manager, directions)` in `piece.gd` walks from the piece along each `Vector2i(file step, rank step)` and returns every square up to and including the first occupied one. Squares behind a piece are not targets, so they are not highlighted. Bishops, rooks and queens each use it with their own `DIRECTIONS`.
 
 `has_moved` starts `false` and is set by `move_manager` after a piece's first move.
+
+**Companion moves.** `get_companion_move(target_square, board_manager)` returns a second piece that moves with this one, as `{ "piece", "square" }`, or `{}`. The base returns `{}`; the king uses it for castling.
+
+**Threats.** `get_threatened_squares(board_manager)` returns the squares a piece would capture on: empty squares and squares holding an enemy, never squares holding a friendly piece or behind a blocker. The base returns `get_moves()`, which is right for every type except the pawn. The pawn overrides it to return its two diagonal-forward squares (empty or enemy) and not the squares straight ahead. `player.get_threatened_squares(board_manager)` combines the threats of all that player's pieces on the board.
 - **Creation:** `create_pieces_step.gd` maps each `PieceType` to its script in `PIECE_SCRIPTS` and creates a piece with `PIECE_SCRIPTS[type].new()`, which runs the subclass `_init()`. Pieces are named after their type and starting square, e.g. `Pawn_e2`, `King_e8`. White starts on ranks 1–2, black on ranks 7–8.
 
 ### Turns and phases
@@ -222,11 +234,11 @@ Every piece extends one base script, so each piece type keeps its own movement r
 
 ### Move manager
 
-`move_manager.gd` (`Scripts/Logic/PlayingRound/Movement/`) carries out moves.
+`move_manager.gd` (`Scripts/Logic/PlayingRound/Movement/`) carries out moves and captures.
 
-- `initialize(board_manager)`.
-- `move_piece(piece, square)` moves the piece only if `square` is in `piece.get_moves(board_manager)`. It places the piece with `board_manager.place_piece`, sets `has_moved`, emits `piece_moved(piece, from_square, to_square)`, and returns `true`. Otherwise it returns `false` and nothing changes.
-- Captures are not built: a move onto an occupied square (an enemy piece) is refused, even though the piece's rules count it as a move.
+- `initialize(board_manager, player_manager)`.
+- `move_piece(piece, square)` moves the piece only if `square` is in `piece.get_moves(board_manager)`; otherwise it returns `false` and nothing changes. It reads `piece.get_companion_move()` first, while the piece still stands on its square. If the square holds an enemy piece, that piece is captured (see below). Then `place()` puts the piece on the square with `board_manager.place_piece`, sets `has_moved` and emits `piece_moved(piece, from_square, to_square)`. If there is a companion move (the rook when castling), it is placed the same way, with its own `piece_moved`. Returns `true`.
+- **Capturing** (`capture(capturing_piece, captured_piece)`): the captured piece is taken off the board (`board_manager.remove_piece`), removed from its owner (`remove_piece`), and given to the capturing player (`add_captured`). After `piece_moved`, the manager emits `piece_captured(captured_piece, capturing_piece, capturing_player)`.
 
 ### Selection manager
 
@@ -247,7 +259,7 @@ The playing round does not own its systems. It receives the registry, and its UI
   - `PhaseLabel` shows the current phase name and updates on `phase_changed`.
   - `TurnLabel` shows the current player id ("white") on `initialize` and on `turn_changed`.
   - The END TURN button stores the state manager. Pressing it does nothing yet.
-- **3D (`board_view.tscn`).** The router adds it under `3D` and calls `initialize(board_manager, selection_manager, move_manager)`. See below.
+- **3D (`board_view.tscn`).** The router adds it under `3D` and calls `initialize(board_manager, selection_manager, move_manager, turn_manager, player_manager)`. See below.
 - **Teardown.** On `MAIN_MENU` the router frees the UI and the board view. `logic.clear()` frees the playing round logic and every round system.
 
 ## 3D board view
@@ -265,15 +277,21 @@ The playing round does not own its systems. It receives the registry, and its UI
 
 **Layout.** The board is centred on the origin with one world unit per square (`square_size`). Files a–h run along +X; ranks 1–8 run along −Z, so rank 1 is nearest the camera. The square tops are at y = 0. `square_to_position(file, rank)` and its inverse `position_to_square(local_position)` convert between the two.
 
-**Inspector settings:** `square_size`, `square_thickness`, `light_color`, `dark_color`, `selected_color`, `move_color`, `blocked_color`.
+**Inspector settings:** `square_size`, `square_thickness`, `light_color`, `dark_color`, `selected_color`, `move_color`, `blocked_color`, `threat_color`, `threat_strength` (0.45), `threatened_piece_color`, `threatened_piece_strength` (0.7), `captured_scale` (0.5), `captured_margin_front` (0.6), `captured_margin_back` (1.6), `captured_spacing` (0.3), `captured_group_spacing` (0.6).
 
 **Selection highlight.** On `selection_changed`, every highlighted square gets its normal colour back. Then the selected piece's square is drawn in `selected_color`, its `get_moves()` squares in `move_color`, and its `get_blocked_moves()` squares in `blocked_color`.
+
+**Square colour layers.** Each square shows the top layer that covers it: selection highlights (`selection_highlights`), then tactical view tints (`threat_highlights`), then its plain light or dark colour. `refresh_squares()` reapplies all 64 whenever a layer changes.
+
+**Tactical view.** The `tactical_view` input action (F5) toggles it. While it is on, every square in the current player's `get_threatened_squares()` is tinted: empty squares toward `threat_color` (orange) and squares holding an enemy piece toward `threatened_piece_color` (red). Tints are mixed into the square's own colour by `threat_strength` and `threatened_piece_strength`, so the light and dark pattern still shows. The view recomputes on toggle, after every move, and on `turn_changed`. A selected piece's highlights draw over the tints and the tints return when the selection clears.
+
+**Captured lines.** On `move_manager.piece_captured`, the captured piece's view stops being clickable, waits for the capturing piece's move to finish (`get_move_duration()`), then moves to its place in the capturing player's line and shrinks to `captured_scale`. Pieces already in the line move at the same time to make room, so a new pawn slides in after the other pawns and pushes later groups along. `get_captured_positions(player)` lays the line out along the board's width from the a-file side: `captured_spacing` between pieces of the same type, `captured_group_spacing` before a new type. The camera views from white's side, so white's line runs in front of rank 1 (`captured_margin_front` squares out) and black's behind rank 8 (`captured_margin_back`, further out so the back-rank pieces do not hide it).
 
 **Moving pieces.** On `move_manager.piece_moved`, the board view calls `move_to(piece_position(square))` on the piece's view (`piece_position` is the square centre at y = 0), which animates it there. See [Piece motion](#piece-motion).
 
 ### Clicking
 
-`board_input.gd` handles left clicks in `_unhandled_input` and emits `square_clicked(square)`, which `BoardView` connects to `selection_manager.select_square`.
+`board_input.gd` handles left clicks in `_unhandled_input` and emits `square_clicked(square)`, which `BoardView` connects to `selection_manager.select_square`. It also emits `tactical_view_toggled` when the `tactical_view` action is pressed.
 
 1. The click position is stored, and the work is done in `_physics_process`, where physics queries are safe.
 2. A ray from the camera is tested against piece click bodies. If it hits one, the result is that piece's square. This means clicking the top of a tall piece selects that piece, not the square behind it.
@@ -321,7 +339,7 @@ These started from FIDE's recommended heights (king 9.5 cm, queen 8.5, bishop 7,
 
 ### Piece motion
 
-`piece_motion.gd` (the `Motion` child of `piece_view.tscn`) animates a piece from square to square. `piece_view.initialize()` hands it the view, sprite, shadow and piece type; `piece_view.move_to(position)` starts a move.
+`piece_motion.gd` (the `Motion` child of `piece_view.tscn`) animates a piece from square to square. `piece_view.initialize()` hands it the view, sprite, shadow and piece type; `piece_view.move_to(position, delay, scale)` starts a move, optionally after `delay` seconds and scaling the view to `scale` on the way.
 
 - The view slides from its current position to the target. Hopping pieces take `hop_duration` seconds and ease in and out on a sine. Every other piece takes `slide_duration` and follows an ADSR speed envelope (`slide_envelope.gd`):
   - **Attack** (`slide_attack`): speed ramps from 0 to its peak.
@@ -392,7 +410,7 @@ These started from FIDE's recommended heights (king 9.5 cm, queen 8.5, bishop 7,
 
 These come from reading the code. They have not been confirmed by running the game.
 
-- **No captures.** Pawns cannot capture diagonally. Nothing captures: `move_manager` refuses occupied squares. `player.remove_piece()` takes a piece off its player but does not clear its square or free it.
+- **Kings can be captured,** since check is not built. A captured king goes to the end of the line.
 - **END TURN does nothing,** so it is always white's turn and black's pieces cannot be selected.
 - **No way back to the main menu.** The router's `MAIN_MENU` branch works, but nothing requests that state after startup.
 - **No settings panel.** `MainMenuState.SETTINGS` exists, but there is no button or panel for it.
@@ -400,5 +418,5 @@ These come from reading the code. They have not been confirmed by running the ga
 - **The router creates `round_config`.** It is created when the menu enters `GAME_SETUP`. The main menu would be the more natural owner.
 - **Same-state guards do nothing.** In `GameState.change_state` and `PhaseManager.advance_phase`, the `if current == new: pass` check does not return, so a repeated request still emits. `MainMenuState.change_state` returns correctly.
 - **Unused pieces.** `TurnManager.turn_change_requested` is declared but never connected. Phases are not used by the chess code. `GameInitializer` only stores the registry.
-- **Piece views follow moves only.** `BoardView` moves a view on `piece_moved`; once captures exist it will also need to remove views.
+- **Captured lines assume white's view,** like the forward shift: black's line is placed behind the board because the camera is on white's side.
 - **Forward shift assumes white's view.** See [Piece views](#piece-views).

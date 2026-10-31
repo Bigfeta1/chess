@@ -34,6 +34,8 @@ var shadow: Node3D
 var tween: Tween
 var from_position: Vector3
 var to_position: Vector3
+var from_scale := 1.0
+var to_scale := 1.0
 var hop_height := 0.0
 var slide_curve: Array
 
@@ -43,22 +45,30 @@ func initialize(view_reference: Node3D, sprite_reference: Node3D, shadow_referen
 	shadow = shadow_reference
 	hop_height = HOP_HEIGHTS.get(piece_type, 0.0)
 
-# Moves the view to target_position (its foot on the board).
+# Seconds this piece's moves take.
+func get_duration() -> float:
+	return hop_duration if hop_height > 0.0 else slide_duration
+
+# Moves the view to target_position (its foot on the board), scaling it to
+# target_scale on the way. Waits delay seconds before starting.
 # A move started mid-animation continues from wherever the piece is.
-func move_to(target_position: Vector3) -> void:
+func move_to(target_position: Vector3, delay := 0.0, target_scale := 1.0) -> void:
 	if tween != null and tween.is_valid():
 		tween.kill()
 
 	from_position = view.position
 	to_position = target_position
+	from_scale = view.scale.x
+	to_scale = target_scale
 
 	# Built per move, so Inspector changes apply on the next move.
 	slide_curve = SlideEnvelope.build(slide_attack, slide_decay, slide_sustain_level, slide_release)
 
 	# Time runs linearly; _step shapes it into progress.
 	tween = create_tween()
-	var duration = hop_duration if hop_height > 0.0 else slide_duration
-	tween.tween_method(_step, 0.0, 1.0, duration)
+	if delay > 0.0:
+		tween.tween_interval(delay)
+	tween.tween_method(_step, 0.0, 1.0, get_duration())
 	tween.finished.connect(_step.bind(1.0))
 
 # u is elapsed time, 0 to 1 over the move.
@@ -71,6 +81,7 @@ func _step(u: float) -> void:
 		t = SlideEnvelope.progress(slide_curve, u)
 
 	view.position = from_position.lerp(to_position, t)
+	view.scale = Vector3.ONE * lerpf(from_scale, to_scale, t)
 
 	# Parabola: 0 at both ends, 1 at the middle.
 	var lift = 4.0 * t * (1.0 - t)

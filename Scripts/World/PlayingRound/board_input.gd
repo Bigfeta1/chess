@@ -6,6 +6,8 @@ extends Node
 # under the mouse on the board surface (y = 0).
 
 signal square_clicked(square)
+# The tactical_view input action (F5 by default) was pressed.
+signal tactical_view_toggled
 
 const RAY_LENGTH := 100.0
 
@@ -20,6 +22,11 @@ func initialize(camera_reference: Camera3D, board_view_reference) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if camera == null:
+		return
+
+	if event.is_action_pressed("tactical_view"):
+		tactical_view_toggled.emit()
+		get_viewport().set_input_as_handled()
 		return
 
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:

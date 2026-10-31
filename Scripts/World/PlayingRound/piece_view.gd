@@ -60,9 +60,17 @@ func initialize(piece_reference) -> void:
 	motion.initialize(self, sprite, shadow, piece.piece_type)
 	set_sprite()
 
-# Animates the piece to target_position (its foot on the board).
-func move_to(target_position: Vector3) -> void:
-	motion.move_to(target_position)
+# Animates the piece to target_position (its foot on the board), scaling it
+# to target_scale, after waiting delay seconds.
+func move_to(target_position: Vector3, delay := 0.0, target_scale := 1.0) -> void:
+	motion.move_to(target_position, delay, target_scale)
+
+func get_move_duration() -> float:
+	return motion.get_duration()
+
+# A captured piece can no longer be clicked.
+func set_captured() -> void:
+	click_shape.disabled = true
 
 func set_sprite() -> void:
 	var path = get_sprite_path()

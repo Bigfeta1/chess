@@ -35,6 +35,23 @@ func place_piece(piece, notation: String) -> void:
 	square.piece = piece
 	piece.square = square
 
+# Takes a piece off the board, clearing both sides of the link.
+func remove_piece(piece) -> void:
+	if piece.square == null:
+		return
+
+	piece.square.piece = null
+	piece.square = null
+
+# Whether any piece of by_team on the board threatens square.
+func is_threatened(square, by_team: int) -> bool:
+	for other in squares.values():
+		if other.is_empty() or other.piece.team != by_team:
+			continue
+		if other.piece.get_threatened_squares(self).has(square):
+			return true
+	return false
+
 func get_square(notation: String):
 	return squares.get(notation)
 
