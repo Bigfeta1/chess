@@ -40,6 +40,7 @@ const HEIGHT_RATIOS = {
 @onready var sprite = $Sprite
 @onready var shadow = $Shadow
 @onready var click_shape = $ClickBody/ClickShape
+@onready var motion = $Motion
 
 var piece
 var piece_height := 0.0
@@ -56,7 +57,12 @@ func _ready() -> void:
 
 func initialize(piece_reference) -> void:
 	piece = piece_reference
+	motion.initialize(self, sprite, shadow, piece.piece_type)
 	set_sprite()
+
+# Animates the piece to target_position (its foot on the board).
+func move_to(target_position: Vector3) -> void:
+	motion.move_to(target_position)
 
 func set_sprite() -> void:
 	var path = get_sprite_path()

@@ -2,23 +2,31 @@ extends Node
 
 # Holds the currently selected piece. Only pieces belonging to the player
 # whose turn it is can be selected. Selection is cleared when the turn changes.
+# With a piece selected, clicking one of its moves asks the move manager to move it.
 
 signal selection_changed(piece)
 
 var turn_manager
 var player_manager
+var move_manager
 
 var selected_piece = null
 
-func initialize(turn_mngr, player_mngr) -> void:
+func initialize(turn_mngr, player_mngr, move_mngr) -> void:
 	turn_manager = turn_mngr
 	player_manager = player_mngr
+	move_manager = move_mngr
 	turn_manager.turn_changed.connect(_on_turn_changed)
 
-# Called when a square is clicked. Selects the piece on it if it belongs to
-# the current player; clicking the selected piece again, or anything else,
-# clears the selection.
+# Called when a square is clicked. If a piece is selected and the square is
+# one of its moves, the piece moves there and the selection clears.
+# Otherwise selects the piece on the square if it belongs to the current
+# player; clicking the selected piece again, or anything else, clears the selection.
 func select_square(square) -> void:
+	if selected_piece != null and move_manager.move_piece(selected_piece, square):
+		clear_selection()
+		return
+
 	if square == null or square.is_empty():
 		clear_selection()
 		return

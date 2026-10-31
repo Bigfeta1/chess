@@ -2,12 +2,16 @@ extends Node3D
 
 # Draws the board in 3D from the board manager's squares.
 # Reads from logic; sends clicked squares to the selection manager.
+# Highlights the selected piece's square, its moves and its blocked moves,
+# and moves piece views when the move manager moves a piece.
 
 @export var square_size := 1.0
 @export var square_thickness := 0.1
 @export var light_color := Color(0.93, 0.87, 0.75)
 @export var dark_color := Color(0.45, 0.32, 0.22)
 @export var selected_color := Color(0.85, 0.75, 0.25)
+@export var move_color := Color(0.4, 0.7, 0.35)
+@export var blocked_color := Color(0.75, 0.3, 0.28)
 
 @onready var squares_root = $Squares
 @onready var pieces_root = $Pieces
@@ -19,17 +23,21 @@ var piece_view = preload("res://Scenes/PlayingRound/piece_view.tscn")
 
 var board_manager
 var selection_manager
+var move_manager
 var square_views := {}
 var piece_views := {}
 
 var light_material: StandardMaterial3D
 var dark_material: StandardMaterial3D
 var selected_material: StandardMaterial3D
-var highlighted_square = null
+var move_material: StandardMaterial3D
+var blocked_material: StandardMaterial3D
+var highlighted_squares := []
 
-func initialize(board_mngr, selection_mngr) -> void:
+func initialize(board_mngr, selection_mngr, move_mngr) -> void:
 	board_manager = board_mngr
 	selection_manager = selection_mngr
+	move_manager = move_mngr
 
 	build_board()
 	build_pieces()
@@ -38,6 +46,7 @@ func initialize(board_mngr, selection_mngr) -> void:
 	board_input.initialize(camera, self)
 	board_input.square_clicked.connect(selection_manager.select_square)
 	selection_manager.selection_changed.connect(_on_selection_changed)
+	move_manager.piece_moved.connect(_on_piece_moved)
 
 func build_pieces() -> void:
 	for square in board_manager.squares.values():
@@ -47,9 +56,7 @@ func build_pieces() -> void:
 		var view = piece_view.instantiate()
 		view.name = square.piece.name
 		pieces_root.add_child(view)
-		var square_position = square_to_position(square.file, square.rank)
-		# Piece origin is its foot: put it on the board's top surface (y = 0).
-		view.position = Vector3(square_position.x, 0.0, square_position.z)
+		view.position = piece_position(square)
 		view.initialize(square.piece)
 		piece_views[square.piece] = view
 
@@ -60,6 +67,8 @@ func build_board() -> void:
 	light_material = make_material(light_color)
 	dark_material = make_material(dark_color)
 	selected_material = make_material(selected_color)
+	move_material = make_material(move_color)
+	blocked_material = make_material(blocked_color)
 
 	for square in board_manager.squares.values():
 		var view = MeshInstance3D.new()
@@ -79,15 +88,33 @@ func get_square_material(square) -> StandardMaterial3D:
 	return light_material if square.is_light else dark_material
 
 func _on_selection_changed(piece) -> void:
-	if highlighted_square != null:
-		square_views[highlighted_square.square_name].material_override = get_square_material(highlighted_square)
-		highlighted_square = null
+	clear_highlights()
 
 	if piece == null or piece.square == null:
 		return
 
-	highlighted_square = piece.square
-	square_views[highlighted_square.square_name].material_override = selected_material
+	highlight(piece.square, selected_material)
+	for square in piece.get_moves(board_manager):
+		highlight(square, move_material)
+	for square in piece.get_blocked_moves(board_manager):
+		highlight(square, blocked_material)
+
+func highlight(square, material: StandardMaterial3D) -> void:
+	square_views[square.square_name].material_override = material
+	highlighted_squares.append(square)
+
+func clear_highlights() -> void:
+	for square in highlighted_squares:
+		square_views[square.square_name].material_override = get_square_material(square)
+	highlighted_squares.clear()
+
+func _on_piece_moved(piece, _from_square, to_square) -> void:
+	piece_views[piece].move_to(piece_position(to_square))
+
+# A piece's origin is its foot: on the square centre, at the board's top surface (y = 0).
+func piece_position(square) -> Vector3:
+	var square_position = square_to_position(square.file, square.rank)
+	return Vector3(square_position.x, 0.0, square_position.z)
 
 # Board is centred on the origin. Files run along +X (a to h),
 # ranks run along -Z (1 to 8), so rank 1 faces a camera on +Z.

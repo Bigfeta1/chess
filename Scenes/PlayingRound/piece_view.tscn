@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://Scripts/World/PlayingRound/piece_view.gd" id="1_piece_view"]
+[ext_resource type="Script" path="res://Scripts/World/PlayingRound/piece_motion.gd" id="2_piece_motion"]
 
 [node name="PieceView" type="Node3D"]
 script = ExtResource("1_piece_view")
@@ -12,3 +13,6 @@ script = ExtResource("1_piece_view")
 [node name="ClickBody" type="StaticBody3D" parent="."]
 
 [node name="ClickShape" type="CollisionShape3D" parent="ClickBody"]
+
+[node name="Motion" type="Node" parent="."]
+script = ExtResource("2_piece_motion")
