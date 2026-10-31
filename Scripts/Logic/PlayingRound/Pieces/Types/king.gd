@@ -1,8 +1,8 @@
 extends "res://Scripts/Logic/PlayingRound/Pieces/piece.gd"
 
 # King. Steps one square in any direction, or castles.
-# Check is not built yet: the king can still step onto a threatened square
-# with a normal move.
+# It never steps onto a threatened square: the base get_moves() rejects any
+# move that leaves the king threatened.
 #
 # Castling moves the king two squares toward a rook, and the rook to the
 # square the king crossed. It is a target while the king and that rook have

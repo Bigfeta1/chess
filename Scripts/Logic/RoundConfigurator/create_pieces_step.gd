@@ -37,6 +37,22 @@ func run(configurator):
 			create_piece(BACK_RANK[file], player, board_manager, board_manager.to_notation(file, back_rank))
 			create_piece(Piece.PieceType.PAWN, player, board_manager, board_manager.to_notation(file, pawn_rank))
 
+	apply_test_moves(board_manager)
+
+# TEMPORARY test position: [from, to] pairs applied after the normal setup.
+# Empty this list for a normal game.
+# Black's b8 knight on d3 checks the white king; white's f1 bishop on f3
+# frees f1 for the king.
+const TEST_MOVES = [
+	["b8", "d3"],
+	["f1", "f3"]
+]
+
+func apply_test_moves(board_manager) -> void:
+	for move in TEST_MOVES:
+		var piece = board_manager.get_square(move[0]).piece
+		board_manager.place_piece(piece, move[1])
+
 func create_piece(type, player, board_manager, notation: String) -> void:
 	var piece = PieceFactory.create(type, player.team, notation)
 	player.add_piece(piece)

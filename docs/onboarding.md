@@ -2,8 +2,8 @@
 
 A chess game in Godot 4.5 (Forward Plus), built on a reusable game-flow template: a main menu, a setup panel, a round being assembled step by step, and a playing round.
 
-- **Working now:** boot to the main menu, press NEW GAME, press BEGIN. The round configurator builds the board, the two players and all 32 pieces, and the playing round shows a 3D board with sprite pieces. You can click a piece of the side to move to select it. Its square is highlighted, along with the squares it can move to (green) and the squares it targets but may not enter (red). Every piece moves: click a highlighted green square and the piece goes there. Moving onto an enemy piece captures it, and captured pieces line up beside the board. A pawn that reaches its last rank is promoted: a panel offers queen, rook, bishop or knight, and the pawn becomes the chosen piece. Press F5 to toggle the tactical view, which tints every square the side to move threatens.
-- **Not built yet:** check, en passant, and game end. The END TURN button does nothing, so it is always white's turn.
+- **Working now:** boot to the main menu, press NEW GAME, press BEGIN. The round configurator builds the board, the two players and all 32 pieces, and the playing round shows a 3D board with sprite pieces. You can click a piece of the side to move to select it. Its square is highlighted, along with the squares it can move to (green) and the squares it targets but may not enter (red). Every piece moves: click a highlighted green square and the piece goes there. Moving onto an enemy piece captures it, and captured pieces line up beside the board. A pawn that reaches its last rank is promoted: a panel offers queen, rook, bishop or knight, and the pawn becomes the chosen piece. A move that would leave your own king threatened is blocked (red): while in check, only moves that end the check are allowed; a pinned piece cannot leave its line; the king cannot step onto a threatened square. Press F5 to toggle the tactical view, which tints every square the side to move threatens.
+- **Not built yet:** checkmate and stalemate (game end), en passant, and any on-board sign that a king is in check. The END TURN button does nothing, so it is always white's turn.
 
 ## Project layout
 
@@ -178,6 +178,7 @@ All of these are plain `Node`s under `Logic`, built by configurator steps and fr
 - On `_ready` it creates one square node per square as children, named `a1` to `h8`, and indexes them in `squares` by name.
 - `remove_piece(piece)` takes a piece off the board and clears both sides of the link.
 - `is_threatened(square, by_team)` returns whether any piece of that team on the board threatens the square (see [Threats](#pieces)).
+- `is_in_check(team)` returns whether that team's king is on the board and threatened by the other team. `get_king_square(team)` finds the king (or `null`), and `get_opponent(team)` returns the other team.
 - `get_square("e4")` looks a square up by name. `get_square_at(file, rank)` looks it up by index (0–7 each, `0, 0` is a1) and returns `null` off the board. `is_on_board(file, rank)` and `to_notation(file, rank)` are helpers.
 - `place_piece(piece, "e4")` puts a piece on an empty square and keeps both sides linked (`square.piece` and `piece.square`). If the piece was on another square, that square is cleared. It does nothing if the target is occupied.
 
@@ -193,7 +194,7 @@ Each player (`player.gd`) holds `player_id`, `team`, `is_human` (always `true` f
 
 - `pieces` lists the player's pieces. The pieces are also children of the player node, so the player owns them in the tree.
 - `add_piece(piece)` and `remove_piece(piece)` emit `piece_added` and `piece_removed`. `has_piece(piece)` and `get_pieces_of_type(type)` read the list.
-- `captured_pieces` lists the enemy pieces this player has captured. They are also children of the player node. `add_captured(piece)` inserts a piece after the last captured piece of its group and emits `piece_captured`. Groups follow `CAPTURE_ORDER`: pawns, knights, bishops, rooks, queens; a type not listed (the king, which can be captured while check is not built) goes last. So capturing a pawn, then a knight, then a pawn gives pawn, pawn, knight.
+- `captured_pieces` lists the enemy pieces this player has captured. They are also children of the player node. `add_captured(piece)` inserts a piece after the last captured piece of its group and emits `piece_captured`. Groups follow `CAPTURE_ORDER`: pawns, knights, bishops, rooks, queens; a type not listed goes last (only the king, which legal moves never let be captured). So capturing a pawn, then a knight, then a pawn gives pawn, pawn, knight.
 
 ### Pieces
 
@@ -204,14 +205,17 @@ Every piece extends one base script, so each piece type keeps its own movement r
   - `get_target_squares(board_manager)`: every on-board square its pattern reaches from where it stands, before validation.
   - `can_move_to(square, board_manager)`: whether it may move to one of those squares. `board_manager` is there for rules that look at other squares, such as a pawn's path.
 
-  The base turns these into `get_moves(board_manager)` (targets that pass `can_move_to`) and `get_blocked_moves(board_manager)` (targets that fail it). The base versions of both overrides return nothing.
+  The base turns these into three lists. The base versions of both overrides return nothing.
+  - `get_pattern_moves(board_manager)`: targets that pass `can_move_to`, ignoring check.
+  - `get_moves(board_manager)`: pattern moves that do not leave the piece's own king threatened (`leaves_king_in_check`). These are the legal moves; highlighting and `move_manager` use them.
+  - `get_blocked_moves(board_manager)`: every target that is not in `get_moves`.
 - **Types:** `Pieces/Types/` has `king.gd`, `queen.gd`, `rook.gd`, `bishop.gd`, `knight.gd` and `pawn.gd`. Each extends the base by path and sets its `piece_type` in `_init()`.
   - **Knight** (done): targets the eight L-shaped jumps that land on the board (`OFFSETS`); pieces in between do not block it. A move is blocked only if the square holds a friendly piece.
   - **Pawn** (done): targets one square forward, plus two forward while `has_moved` is false. Forward is +1 rank for white and −1 for black (`get_forward()`). A straight move is blocked if the target or any square between it and the pawn holds a piece of either colour. It also targets each diagonal-forward square that holds an enemy piece, and captures there; empty diagonals are not targets, so they are not highlighted. `get_last_rank()` is rank 8 for white and rank 1 for black; `is_on_last_rank()` tells the promotion manager when to promote (see [Promotion](#promotion)). En passant is not built.
   - **Bishop** (done): slides along the four diagonals (`DIRECTIONS`) using `get_sliding_targets`. A move is blocked only if the square holds a friendly piece. A bishop never changes square colour, so it does not track it; `square.is_light` gives the colour when needed.
   - **Rook** (done): slides along its file and rank (`DIRECTIONS`) using `get_sliding_targets`. A move is blocked only if the square holds a friendly piece. `has_moved` is already set after its first move, which castling will need.
   - **Queen** (done): slides along its file, rank and both diagonals (eight `DIRECTIONS`) using `get_sliding_targets`. A move is blocked only if the square holds a friendly piece.
-  - **King** (done): targets the eight neighbouring squares that are on the board (`OFFSETS`). A step is blocked only if the square holds a friendly piece. It can step onto a threatened square, since check is not built.
+  - **King** (done): targets the eight neighbouring squares that are on the board (`OFFSETS`). A step is blocked if the square holds a friendly piece or is threatened (through the check rule in `get_moves`).
   - **Castling** (in `king.gd`): moves the king two squares toward a rook and the rook to the square the king crossed. Kingside: king to g, rook h to f. Queenside: king to c, rook a to d (`CASTLING`).
 	- **Target:** the castling square is a target only while the king and that corner's rook have never moved (`has_moved`), the corner holds a friendly rook (`get_castling_rook`), and none of the king's own pieces stand between them (`has_friendly_between`). Otherwise it is not shown at all, to keep the board readable.
 	- **Allowed** (`can_castle`) only if every square between the king and the rook is empty, and no opponent piece threatens the king's square, the square it crosses, or the square it lands on (`board_manager.is_threatened`). Queenside the b-file square must be empty but may be threatened, because the king never crosses it. A target that fails these (an enemy piece in between, or a threatened square) shows as blocked (red).
@@ -224,7 +228,9 @@ Every piece extends one base script, so each piece type keeps its own movement r
 
 **Companion moves.** `get_companion_move(target_square, board_manager)` returns a second piece that moves with this one, as `{ "piece", "square" }`, or `{}`. The base returns `{}`; the king uses it for castling.
 
-**Threats.** `get_threatened_squares(board_manager)` returns the squares a piece would capture on: empty squares and squares holding an enemy, never squares holding a friendly piece or behind a blocker. The base returns `get_moves()`, which is right for every type except the pawn. The pawn overrides it to return its two diagonal-forward squares (empty or enemy) and not the squares straight ahead. `player.get_threatened_squares(board_manager)` combines the threats of all that player's pieces on the board.
+**Check.** `leaves_king_in_check(target_square, board_manager)` tries the move directly on the square links (`square.piece` and `piece.square`), asks `board_manager.is_in_check(team)`, and puts everything back. It emits no signals and does not touch players. A piece on the target is treated as captured, so it stops threatening while the move is tried. For castling only the king is tried; `can_castle` already checks every square the king stands on, crosses or lands on, which also forbids castling out of check.
+
+**Threats.** `get_threatened_squares(board_manager)` returns the squares a piece would capture on: empty squares and squares holding an enemy, never squares holding a friendly piece or behind a blocker. The base returns `get_pattern_moves()`, not `get_moves()`: a pinned piece still gives check, and using `get_moves()` here would make the check test call itself. This is right for every type except the pawn and king. The pawn overrides it to return its two diagonal-forward squares (empty or enemy) and not the squares straight ahead. `player.get_threatened_squares(board_manager)` combines the threats of all that player's pieces on the board.
 - **Creation:** `piece_factory.gd` (`Pieces/`) maps each `PieceType` to its script in `PIECE_SCRIPTS`. `PieceFactory.create(type, team, notation)` makes a piece with `PIECE_SCRIPTS[type].new()` (which runs the subclass `_init()`), sets its team and names it; it does not place it or give it to a player. `create_pieces_step.gd` and the promotion manager both use it. Pieces are named after their type and starting square, e.g. `Pawn_e2`, `King_e8`. White starts on ranks 1–2, black on ranks 7–8.
 
 ### Turns and phases
@@ -239,7 +245,7 @@ Every piece extends one base script, so each piece type keeps its own movement r
 `move_manager.gd` (`Scripts/Logic/PlayingRound/Movement/`) carries out moves and captures.
 
 - `initialize(board_manager, player_manager)`.
-- `move_piece(piece, square)` moves the piece only if `square` is in `piece.get_moves(board_manager)`; otherwise it returns `false` and nothing changes. It reads `piece.get_companion_move()` first, while the piece still stands on its square. If the square holds an enemy piece, that piece is captured (see below). Then `place()` puts the piece on the square with `board_manager.place_piece`, sets `has_moved` and emits `piece_moved(piece, from_square, to_square)`. If there is a companion move (the rook when castling), it is placed the same way, with its own `piece_moved`. Returns `true`.
+- `move_piece(piece, square)` moves the piece only if `square` is in `piece.get_moves(board_manager)` (so never into or through check); otherwise it returns `false` and nothing changes. It reads `piece.get_companion_move()` first, while the piece still stands on its square. If the square holds an enemy piece, that piece is captured (see below). Then `place()` puts the piece on the square with `board_manager.place_piece`, sets `has_moved` and emits `piece_moved(piece, from_square, to_square)`. If there is a companion move (the rook when castling), it is placed the same way, with its own `piece_moved`. Returns `true`.
 - **Capturing** (`capture(capturing_piece, captured_piece)`): the captured piece is taken off the board (`board_manager.remove_piece`), removed from its owner (`remove_piece`), and given to the capturing player (`add_captured`). After `piece_moved`, the manager emits `piece_captured(captured_piece, capturing_piece, capturing_player)`.
 
 ### Promotion
@@ -425,7 +431,8 @@ These started from FIDE's recommended heights (king 9.5 cm, queen 8.5, bishop 7,
 
 These come from reading the code. They have not been confirmed by running the game.
 
-- **Kings can be captured,** since check is not built. A captured king goes to the end of the line.
+- **No game end.** Checkmate and stalemate are not detected: when the side to move has no legal moves, every square is simply blocked.
+- **Check only matters once black can move.** END TURN does nothing, so black's pieces never move and cannot give check during play yet.
 - **END TURN does nothing,** so it is always white's turn and black's pieces cannot be selected.
 - **No way back to the main menu.** The router's `MAIN_MENU` branch works, but nothing requests that state after startup.
 - **No settings panel.** `MainMenuState.SETTINGS` exists, but there is no button or panel for it.

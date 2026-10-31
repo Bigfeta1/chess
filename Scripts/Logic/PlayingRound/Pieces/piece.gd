@@ -39,9 +39,11 @@ func can_move_to(_target_square, _board_manager) -> bool:
 # Squares this piece threatens: where it would capture an enemy piece.
 # Empty squares count, as do squares holding an enemy; squares behind a
 # piece and squares holding a friendly piece do not. For most pieces this
-# is the same as their moves; pawns override it.
+# is the same as their pattern moves; pawns and kings override it.
+# A piece threatens a square even if moving there would expose its own king
+# (a pinned piece still gives check), so this uses get_pattern_moves().
 func get_threatened_squares(board_manager) -> Array:
-	return get_moves(board_manager)
+	return get_pattern_moves(board_manager)
 
 # A second piece that moves as part of moving this piece to target_square,
 # as { "piece": ..., "square": ... }, or an empty dictionary for none.
@@ -68,10 +70,41 @@ func get_sliding_targets(board_manager, directions: Array) -> Array:
 
 	return targets
 
-# Targeted squares this piece may move to.
-func get_moves(board_manager) -> Array:
+# Targeted squares this piece's own rules allow, ignoring check.
+func get_pattern_moves(board_manager) -> Array:
 	return get_target_squares(board_manager).filter(func(target): return can_move_to(target, board_manager))
+
+# Targeted squares this piece may move to: its own rules allow it and the
+# move does not leave its king threatened.
+func get_moves(board_manager) -> Array:
+	return get_pattern_moves(board_manager).filter(func(target): return not leaves_king_in_check(target, board_manager))
 
 # Targeted squares this piece may not move to.
 func get_blocked_moves(board_manager) -> Array:
-	return get_target_squares(board_manager).filter(func(target): return not can_move_to(target, board_manager))
+	var moves = get_moves(board_manager)
+	return get_target_squares(board_manager).filter(func(target): return not moves.has(target))
+
+# Whether this piece's king would be threatened after it moved to
+# target_square. The move is tried directly on the square links and undone;
+# no signals are emitted. A piece on target_square is treated as captured.
+# For castling only the king is tried; can_castle already checks every
+# square the king stands on, crosses or lands on.
+func leaves_king_in_check(target_square, board_manager) -> bool:
+	var from_square = square
+	var captured = target_square.piece
+
+	from_square.piece = null
+	if captured != null:
+		captured.square = null
+	target_square.piece = self
+	square = target_square
+
+	var in_check = board_manager.is_in_check(team)
+
+	square = from_square
+	from_square.piece = self
+	target_square.piece = captured
+	if captured != null:
+		captured.square = target_square
+
+	return in_check

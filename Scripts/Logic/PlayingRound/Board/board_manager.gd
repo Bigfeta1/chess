@@ -3,6 +3,9 @@ extends Node
 # Owns the 64 squares of the board (a1 to h8).
 # Squares are created as children and indexed by name ("e4") for lookup.
 
+const PlayerManager = preload("res://Scripts/Logic/PlayingRound/Players/player_manager.gd")
+const Piece = preload("res://Scripts/Logic/PlayingRound/Pieces/piece.gd")
+
 const FILES := "abcdefgh"
 const BOARD_SIZE := 8
 
@@ -51,6 +54,23 @@ func is_threatened(square, by_team: int) -> bool:
 		if other.piece.get_threatened_squares(self).has(square):
 			return true
 	return false
+
+# Whether team's king is on the board and threatened by the other team.
+func is_in_check(team: int) -> bool:
+	var king_square = get_king_square(team)
+	if king_square == null:
+		return false
+	return is_threatened(king_square, get_opponent(team))
+
+# The square team's king stands on, or null if it is not on the board.
+func get_king_square(team: int):
+	for square in squares.values():
+		if not square.is_empty() and square.piece.team == team and square.piece.piece_type == Piece.PieceType.KING:
+			return square
+	return null
+
+func get_opponent(team: int) -> int:
+	return PlayerManager.Team.BLACK if team == PlayerManager.Team.WHITE else PlayerManager.Team.WHITE
 
 func get_square(notation: String):
 	return squares.get(notation)
