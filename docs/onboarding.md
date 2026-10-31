@@ -2,8 +2,9 @@
 
 A chess game in Godot 4.5 (Forward Plus), built on a reusable game-flow template: a main menu, a setup panel, a round being assembled step by step, and a playing round.
 
-- **Working now:** boot to the main menu, press NEW GAME, press BEGIN. The round configurator builds the board, the two players and all 32 pieces, and the playing round shows a 3D board with sprite pieces. You can click a piece of the side to move to select it. Its square is highlighted, along with the squares it can move to (green) and the squares it targets but may not enter (red). Every piece moves: click a highlighted green square and the piece goes there. Moving onto an enemy piece captures it, and captured pieces line up beside the board. A pawn that reaches its last rank is promoted: a panel offers queen, rook, bishop or knight, and the pawn becomes the chosen piece. A move that would leave your own king threatened is blocked (red): while in check, only moves that end the check are allowed; a pinned piece cannot leave its line; the king cannot step onto a threatened square. Press F5 to toggle the tactical view, which tints every square the side to move threatens.
-- **Not built yet:** checkmate and stalemate (game end), en passant, and any on-board sign that a king is in check. The END TURN button does nothing, so it is always white's turn.
+- **Working now:** boot to the main menu, press NEW GAME, press BEGIN. The round configurator builds the board, the two players and all 32 pieces, and the playing round shows a 3D board with sprite pieces. You can click a piece of the side to move to select it. Its square is highlighted, along with the squares it can move to (green) and the squares it targets but may not enter (red). Every piece moves: click a highlighted green square and the piece goes there. Moving onto an enemy piece captures it, and captured pieces line up beside the board. A pawn that reaches its last rank is promoted: a panel offers queen, rook, bishop or knight, and the pawn becomes the chosen piece. A move that would leave your own king threatened is blocked (red): while in check, only moves that end the check are allowed; a pinned piece cannot leave its line; the king cannot step onto a threatened square. When the side to move has no legal moves the game ends: checkmate if it is in check, stalemate (a draw) if not. A panel names the result, and its MAIN MENU button returns to the main menu. Press F5 to toggle the tactical view, which tints every square the side to move threatens.
+- **Not built yet:** en passant, other draws (repetition, fifty moves, insufficient material), and any on-board sign that a king is in check. The END TURN button does nothing, so it is always white's turn.
+- **Test position:** `TEST_MOVES` in `create_pieces_step.gd` is empty, so games start from the normal position. Fill it with `[from, to]` moves to start from a test position; the file has a fool's mate example.
 
 ## Project layout
 
@@ -15,12 +16,12 @@ Scenes are grouped by game state. Scripts are split into three trees that mirror
 | `Scenes/main_scene.tscn` | The entry scene: `StateRouter`, `Logic`, `UI`, `3D`. |
 | `Scenes/MainMenu/Core/` | `main_menu_logic.tscn` and `main_menu_ui.tscn`. |
 | `Scenes/MainMenu/Panels/` | `round_config_panel.tscn`, the game setup panel. |
-| `Scenes/ConfigureRound/` | Everything built while a round is assembled: `round_config.tscn`, `round_configurator_logic.tscn`, `round_configurator_ui.tscn`, and the system scenes the steps create (`state_manager.tscn`, `board_manager.tscn`, `player_manager.tscn`, `move_manager.tscn`, `promotion_manager.tscn`, `selection_manager.tscn`). |
-| `Scenes/PlayingRound/` | `playing_round_logic.tscn`, `playing_round_ui.tscn`, `promotion_panel.tscn`, and the 3D scenes `board_view.tscn` and `piece_view.tscn`. |
+| `Scenes/ConfigureRound/` | Everything built while a round is assembled: `round_config.tscn`, `round_configurator_logic.tscn`, `round_configurator_ui.tscn`, and the system scenes the steps create (`state_manager.tscn`, `board_manager.tscn`, `player_manager.tscn`, `move_manager.tscn`, `promotion_manager.tscn`, `game_end_manager.tscn`, `selection_manager.tscn`). |
+| `Scenes/PlayingRound/` | `playing_round_logic.tscn`, `playing_round_ui.tscn`, `promotion_panel.tscn`, `game_end_panel.tscn`, and the 3D scenes `board_view.tscn` and `piece_view.tscn`. |
 | `Scripts/Autoload/` | `game_state.gd`, the top-level state machine. |
 | `Scripts/MainScene/` | `main_scene.gd` (startup) and `logic.gd` (the system registry). |
 | `Scripts/Logic/` | `state_router.gd`, `round_config.gd`, and one folder per area: `MainMenu/`, `RoundConfigurator/`, `PlayingRound/`. |
-| `Scripts/Logic/PlayingRound/` | Round systems: `Board/`, `Players/`, `Pieces/` (with `Types/`), `Movement/`, `Promotion/`, `Selection/`, plus the turn and phase managers. |
+| `Scripts/Logic/PlayingRound/` | Round systems: `Board/`, `Players/`, `Pieces/` (with `Types/`), `Movement/`, `Promotion/`, `GameEnd/`, `Selection/`, plus the turn and phase managers. |
 | `Scripts/UI/` | 2D UI scripts, one folder per area: `MainMenu/`, `ConfigureRound/`, `PlayingRound/`. |
 | `Scripts/World/PlayingRound/` | 3D view scripts: `board_view.gd`, `board_input.gd`, `piece_view.gd`, `piece_motion.gd`, `piece_sprites.gd`, `slide_envelope.gd`, `sprite_bounds.gd`. |
 | `Assets/Pieces/` | Piece sprites, one folder per colour. See [Piece sprites](#piece-sprites). |
@@ -70,6 +71,7 @@ Systems in the registry:
 | `player_manager` | `CreatePlayerManager` step | `logic.clear()` on `MAIN_MENU` |
 | `move_manager` | `CreateMoveManager` step | `logic.clear()` on `MAIN_MENU` |
 | `promotion_manager` | `CreatePromotionManager` step | `logic.clear()` on `MAIN_MENU` |
+| `game_end_manager` | `CreateGameEndManager` step | `logic.clear()` on `MAIN_MENU` |
 | `selection_manager` | `CreateSelectionManager` step | `logic.clear()` on `MAIN_MENU` |
 | `playing_round` | Router, on `PLAYING_ROUND` | `logic.clear()` on `MAIN_MENU` |
 
@@ -86,7 +88,7 @@ flowchart TD
 	C["PLAYING_ROUND<br/>Free the configurator and its UI<br/>Create the playing round logic and UI<br/>Create the board view under 3D"]
 	A -->|"BEGIN pressed and config.is_valid()"| B
 	B -->|"Configurator finishes its last step (all_completed)"| C
-	C -.->|"Return to main menu: nothing requests it yet"| A
+	C -->|"Game over: MAIN MENU pressed on the game end panel"| A
 ```
 
 In order:
@@ -152,11 +154,12 @@ The round configurator runs a list of steps in order to build the systems a roun
 | 1 | `CreateStateManager` | `create_state_manager_step.gd` | Instantiates `state_manager.tscn` under `Logic` and registers it as `state_manager`. |
 | 2 | `CreateBoardManager` | `create_board_manager_step.gd` | Instantiates `board_manager.tscn` (64 squares) and registers it as `board_manager`. |
 | 3 | `CreatePlayerManager` | `create_player_manager_step.gd` | Instantiates `player_manager.tscn` (white and black) and registers it as `player_manager`. |
-| 4 | `CreatePieces` | `create_pieces_step.gd` | Creates the 32 starting pieces, gives each to its player and places it on its starting square. |
+| 4 | `CreatePieces` | `create_pieces_step.gd` | Creates the 32 starting pieces, gives each to its player and places it on its starting square. Then applies `TEST_MOVES`, a temporary list of `[from, to]` moves for setting up a test position (moved pieces get `has_moved`). Empty it for a normal game. |
 | 5 | `AddPlayersToTurnOrder` | `add_players_to_turn_order_step.gd` | Adds white then black to `TurnManager` and starts the first turn (white). |
 | 6 | `CreateMoveManager` | `create_move_manager_step.gd` | Instantiates `move_manager.tscn`, registers it as `move_manager`, and gives it the board and player managers. |
 | 7 | `CreatePromotionManager` | `create_promotion_manager_step.gd` | Instantiates `promotion_manager.tscn`, registers it as `promotion_manager`, and gives it the board, player and move managers. |
-| 8 | `CreateSelectionManager` | `create_selection_manager_step.gd` | Instantiates `selection_manager.tscn`, registers it as `selection_manager`, and gives it the turn, player, move and promotion managers. |
+| 8 | `CreateGameEndManager` | `create_game_end_manager_step.gd` | Instantiates `game_end_manager.tscn`, registers it as `game_end_manager`, and gives it the board, player, turn, move and promotion managers. |
+| 9 | `CreateSelectionManager` | `create_selection_manager_step.gd` | Instantiates `selection_manager.tscn`, registers it as `selection_manager`, and gives it the turn, player, move, promotion and game end managers. |
 
 **How it runs.**
 
@@ -245,7 +248,7 @@ Every piece extends one base script, so each piece type keeps its own movement r
 `move_manager.gd` (`Scripts/Logic/PlayingRound/Movement/`) carries out moves and captures.
 
 - `initialize(board_manager, player_manager)`.
-- `move_piece(piece, square)` moves the piece only if `square` is in `piece.get_moves(board_manager)` (so never into or through check); otherwise it returns `false` and nothing changes. It reads `piece.get_companion_move()` first, while the piece still stands on its square. If the square holds an enemy piece, that piece is captured (see below). Then `place()` puts the piece on the square with `board_manager.place_piece`, sets `has_moved` and emits `piece_moved(piece, from_square, to_square)`. If there is a companion move (the rook when castling), it is placed the same way, with its own `piece_moved`. Returns `true`.
+- `move_piece(piece, square)` moves the piece only if `square` is in `piece.get_moves(board_manager)` (so never into or through check); otherwise it returns `false` and nothing changes. It reads `piece.get_companion_move()` first, while the piece still stands on its square. If the square holds an enemy piece, that piece is captured (see below). Then `place()` puts the piece on the square with `board_manager.place_piece`, sets `has_moved` and emits `piece_moved(piece, from_square, to_square)`. If there is a companion move (the rook when castling), it is placed the same way, with its own `piece_moved`. Finally it emits `move_finished(piece)` once for the whole move. Returns `true`.
 - **Capturing** (`capture(capturing_piece, captured_piece)`): the captured piece is taken off the board (`board_manager.remove_piece`), removed from its owner (`remove_piece`), and given to the capturing player (`add_captured`). After `piece_moved`, the manager emits `piece_captured(captured_piece, capturing_piece, capturing_player)`.
 
 ### Promotion
@@ -257,12 +260,21 @@ Every piece extends one base script, so each piece type keeps its own movement r
 - `promote(type)` does nothing unless a promotion is pending and `type` is in `CHOICES` (queen, rook, bishop, knight, in the order offered). Otherwise it takes the pawn off the board and away from its player, creates the new piece with `PieceFactory`, sets its `has_moved` (so a promoted rook cannot castle), gives it to the same player, places it on the pawn's square, emits `piece_promoted(pawn, new_piece)`, then frees the pawn.
 - While a promotion is pending, the selection manager ignores every click, so the player must choose before anything else happens.
 
+### Game end
+
+`game_end_manager.gd` (`Scripts/Logic/PlayingRound/GameEnd/`) ends the game when the side to move has no legal moves.
+
+- `initialize(board_manager, player_manager, turn_manager, move_manager, promotion_manager)`. It checks the side whose turn it is right away, so a test position that starts in mate ends at once.
+- On `move_manager.move_finished` it checks the mover's opponent. If the move started a promotion, it waits and checks on `promotion_manager.piece_promoted` instead, because the new piece can change the result. It listens to `move_finished`, not `piece_moved`, so castling is judged after the rook has moved too.
+- `check_side(team)`: if none of that team's pieces on the board has a move in `get_moves()` (`has_legal_moves`), the result is `CHECKMATE` when `board_manager.is_in_check(team)`, otherwise `STALEMATE`. It sets `result` and `winning_team` (the opponent, or −1 for a draw) and emits `game_ended(result, winning_team)`.
+- `is_over()` stays true for the rest of the round. Turn order is not consulted after the start: it always checks the side that did not just move.
+
 ### Selection manager
 
 `selection_manager.gd` (`Scripts/Logic/PlayingRound/Selection/`) holds the selected piece.
 
-- `initialize(turn_manager, player_manager, move_manager, promotion_manager)`.
-- While `promotion_manager.is_pending()`, `select_square` does nothing.
+- `initialize(turn_manager, player_manager, move_manager, promotion_manager, game_end_manager)`.
+- While `promotion_manager.is_pending()` or `game_end_manager.is_over()`, `select_square` does nothing. The selection is cleared on `game_ended`.
 - With a piece selected, `select_square(square)` first asks `move_manager.move_piece(selected_piece, square)`. If the piece moved, the selection is cleared. Otherwise it falls through to selecting:
 - `select_square(square)` selects the piece on that square if it belongs to the player whose turn it is. Clicking the selected piece again, an empty square, an opponent's piece, or off the board clears the selection.
 - `can_select(piece)` is the turn check. `clear_selection()` clears it.
@@ -273,11 +285,12 @@ Every piece extends one base script, so each piece type keeps its own movement r
 The playing round does not own its systems. It receives the registry, and its UI and 3D view are wired to the systems the configurator built.
 
 - **Logic (`playing_round_logic.tscn`).** `PlayingRound` → `EventCoordinators` → `GameInitializer`. The router calls `playing_round.initialize(logic)`, which passes the registry down. `GameInitializer` only stores it.
-- **UI (`playing_round_ui.tscn`).** The router calls `initialize(state_manager, phase_manager, turn_manager, promotion_manager)`. The root `Control` has `mouse_filter` set to Ignore so clicks reach the 3D board.
+- **UI (`playing_round_ui.tscn`).** The router calls `initialize(state_manager, phase_manager, turn_manager, promotion_manager, game_end_manager)`. The root `Control` has `mouse_filter` set to Ignore so clicks reach the 3D board.
   - `PhaseLabel` shows the current phase name and updates on `phase_changed`.
   - `TurnLabel` shows the current player id ("white") on `initialize` and on `turn_changed`.
   - The END TURN button stores the state manager. Pressing it does nothing yet.
   - `PromotionPanel` (`promotion_panel.tscn`, `promotion_panel.gd`) is hidden until `promotion_started`. It then fills `Panel/Margin/Content/Choices` with one button per `CHOICES` entry, each showing that team's piece image cropped to its solid pixels (`sprite_bounds.gd`), at `button_size` (96×96). Pressing one calls `promotion_manager.promote(type)`; on `piece_promoted` the panel hides and empties. Its root is full-screen with `mouse_filter` Ignore; the centred `Panel` blocks clicks under it.
+  - `GameEndPanel` (`game_end_panel.tscn`, `game_end_panel.gd`) is hidden until `game_ended`, or shown at once if the game is already over when the UI is initialized. It shows "CHECKMATE" and "White wins" / "Black wins", or "STALEMATE" and "Draw". Its `MainMenuButton` (`main_menu_button.gd`) requests `MAIN_MENU`, which clears the round. Same layout and `mouse_filter` setup as the promotion panel.
 - **3D (`board_view.tscn`).** The router adds it under `3D` and calls `initialize(board_manager, selection_manager, move_manager, turn_manager, player_manager, promotion_manager)`. See below.
 - **Teardown.** On `MAIN_MENU` the router frees the UI and the board view. `logic.clear()` frees the playing round logic and every round system.
 
@@ -432,9 +445,9 @@ These started from FIDE's recommended heights (king 9.5 cm, queen 8.5, bishop 7,
 These come from reading the code. They have not been confirmed by running the game.
 
 - **No game end.** Checkmate and stalemate are not detected: when the side to move has no legal moves, every square is simply blocked.
-- **Check only matters once black can move.** END TURN does nothing, so black's pieces never move and cannot give check during play yet.
+- **Only white moves.** END TURN does nothing, so black's pieces never move: black cannot give check or mate during play yet (white can mate or stalemate black, and a `TEST_MOVES` position can start with white mated).
 - **END TURN does nothing,** so it is always white's turn and black's pieces cannot be selected.
-- **No way back to the main menu.** The router's `MAIN_MENU` branch works, but nothing requests that state after startup.
+- **The main menu is reached only from the game end panel.** There is no way to leave a game in progress.
 - **No settings panel.** `MainMenuState.SETTINGS` exists, but there is no button or panel for it.
 - **The checklist may flash by.** Every step runs instantly, so the configure state finishes in one frame and its UI is freed right away. The checklist shows once a step awaits something.
 - **The router creates `round_config`.** It is created when the menu enters `GAME_SETUP`. The main menu would be the more natural owner.

@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Logic/PlayingRound/GameEnd/game_end_manager.gd" id="1_game_end"]
+
+[node name="GameEndManager" type="Node"]
+script = ExtResource("1_game_end")

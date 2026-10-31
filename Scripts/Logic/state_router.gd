@@ -168,7 +168,7 @@ func create_playing_round():
 	ui.add_child(playing_round_ui_instance)
 
 	var promotion_manager = logic.get_system("promotion_manager")
-	playing_round_ui_instance.initialize(state_manager, phase_manager, turn_manager, promotion_manager)
+	playing_round_ui_instance.initialize(state_manager, phase_manager, turn_manager, promotion_manager, logic.get_system("game_end_manager"))
 
 	board_view_instance = board_view.instantiate()
 	world.add_child(board_view_instance)

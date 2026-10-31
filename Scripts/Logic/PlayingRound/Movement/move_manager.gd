@@ -7,6 +7,9 @@ extends Node
 signal piece_moved(piece, from_square, to_square)
 # Emitted after piece_moved for the same move.
 signal piece_captured(captured_piece, capturing_piece, capturing_player)
+# Emitted once the whole move is done, including any companion move
+# (the rook when castling).
+signal move_finished(piece)
 
 var board_manager
 var player_manager
@@ -41,6 +44,8 @@ func move_piece(piece, target_square) -> bool:
 	# A companion move (the rook when castling) follows the main one.
 	if not companion.is_empty():
 		place(companion.piece, companion.square)
+
+	move_finished.emit(piece)
 	return true
 
 func place(piece, target_square) -> void:

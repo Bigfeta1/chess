@@ -4,17 +4,19 @@ extends Control
 @onready var turn_label = $TurnLabel
 @onready var phase_label = $PhaseLabel
 @onready var promotion_panel = $PromotionPanel
+@onready var game_end_panel = $GameEndPanel
 
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	pass # Replace with function body.
 
-func initialize(state_manager, phase_manager, turn_manager, promotion_manager):
+func initialize(state_manager, phase_manager, turn_manager, promotion_manager, game_end_manager):
 	end_turn_button.initialize(state_manager)
 	phase_label.initialize(phase_manager)
 	turn_label.initialize(turn_manager)
 	promotion_panel.initialize(promotion_manager)
+	game_end_panel.initialize(game_end_manager)
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta: float) -> void:

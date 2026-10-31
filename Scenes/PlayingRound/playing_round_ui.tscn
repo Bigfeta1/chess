@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3 uid="uid://c7tujkmu1pocv"]
+[gd_scene load_steps=7 format=3 uid="uid://c7tujkmu1pocv"]
 
 [ext_resource type="Script" uid="uid://bqsf2fx4s5bqj" path="res://Scripts/UI/PlayingRound/playing_round_ui.gd" id="1_ijrtg"]
 [ext_resource type="Script" uid="uid://4woou4sj0h05" path="res://Scripts/UI/PlayingRound/end_turn_button.gd" id="2_r6u7c"]
 [ext_resource type="Script" uid="uid://cj4qc8b1l42iw" path="res://Scripts/UI/PlayingRound/phase_label.gd" id="3_yyxya"]
 [ext_resource type="Script" uid="uid://dgvmxk7g8vrnj" path="res://Scripts/UI/PlayingRound/turn_label.gd" id="4_xpa3x"]
 [ext_resource type="PackedScene" path="res://Scenes/PlayingRound/promotion_panel.tscn" id="5_promotion"]
+[ext_resource type="PackedScene" path="res://Scenes/PlayingRound/game_end_panel.tscn" id="6_game_end"]
 
 [node name="PlayingRound" type="Control"]
 layout_mode = 3
@@ -42,4 +43,7 @@ offset_bottom = 74.0
 script = ExtResource("4_xpa3x")
 
 [node name="PromotionPanel" parent="." instance=ExtResource("5_promotion")]
+layout_mode = 1
+
+[node name="GameEndPanel" parent="." instance=ExtResource("6_game_end")]
 layout_mode = 1

@@ -41,17 +41,16 @@ func run(configurator):
 
 # TEMPORARY test position: [from, to] pairs applied after the normal setup.
 # Empty this list for a normal game.
-# Black's b8 knight on d3 checks the white king; white's f1 bishop on f3
-# frees f1 for the king.
-const TEST_MOVES = [
-	["b8", "d3"],
-	["f1", "f3"]
-]
+# Moved pieces count as moved (no pawn double step, no castling).
+# Example (fool's mate, white checkmated at the start):
+# [["f2", "f3"], ["e7", "e5"], ["g2", "g4"], ["d8", "h4"]]
+const TEST_MOVES = []
 
 func apply_test_moves(board_manager) -> void:
 	for move in TEST_MOVES:
 		var piece = board_manager.get_square(move[0]).piece
 		board_manager.place_piece(piece, move[1])
+		piece.has_moved = true
 
 func create_piece(type, player, board_manager, notation: String) -> void:
 	var piece = PieceFactory.create(type, player.team, notation)
