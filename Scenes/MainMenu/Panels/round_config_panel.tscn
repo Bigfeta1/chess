@@ -1,23 +1,13 @@
-[gd_scene load_steps=6 format=3 uid="uid://t3buhnnm2vp5"]
+[gd_scene load_steps=4 format=3 uid="uid://t3buhnnm2vp5"]
 
 [ext_resource type="Script" uid="uid://bxgg3fh2v617e" path="res://Scripts/UI/MainMenu/Panels/RoundConfig/round_config_panel.gd" id="1_g1e1n"]
 [ext_resource type="Script" uid="uid://cbn3xyofkssdf" path="res://Scripts/MainMenu/Panels/begin_button.gd" id="2_g1e1n"]
-[ext_resource type="Script" uid="uid://d2ddg31x0yuiu" path="res://Scripts/Logic/MainMenu/RoundConfig/country_entry_factory.gd" id="3_factory"]
-[ext_resource type="Script" uid="uid://dqcslpj1tarsk" path="res://Scripts/Logic/MainMenu/RoundConfig/country_selector.gd" id="4_selector"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_quu0i"]
 font_size = 32
 
 [node name="RoundConfig" type="Node"]
 script = ExtResource("1_g1e1n")
-
-[node name="Logic" type="Node" parent="."]
-
-[node name="CountryEntryFactory" type="Node" parent="Logic"]
-script = ExtResource("3_factory")
-
-[node name="CountrySelector" type="Node" parent="Logic"]
-script = ExtResource("4_selector")
 
 [node name="Panel" type="Panel" parent="."]
 offset_left = 176.0
@@ -34,18 +24,18 @@ theme_override_constants/margin_top = 20
 [node name="Title" type="Label" parent="Panel/MarginContainer"]
 layout_mode = 2
 size_flags_vertical = 0
-text = "CHOOSE YOUR COUNTRY"
+text = "CONFIGURE GAME"
 label_settings = SubResource("LabelSettings_quu0i")
 horizontal_alignment = 1
 
-[node name="CountryScroll" type="ScrollContainer" parent="Panel"]
+[node name="OptionsScroll" type="ScrollContainer" parent="Panel"]
 layout_mode = 0
 offset_left = 20.0
 offset_top = 95.0
 offset_right = 780.0
 offset_bottom = 480.0
 
-[node name="CountryList" type="VBoxContainer" parent="Panel/CountryScroll"]
+[node name="Options" type="VBoxContainer" parent="Panel/OptionsScroll"]
 layout_mode = 2
 size_flags_horizontal = 3
 
@@ -63,5 +53,3 @@ grow_horizontal = 0
 grow_vertical = 0
 text = "BEGIN"
 script = ExtResource("2_g1e1n")
-
-[connection signal="entry_created" from="Logic/CountryEntryFactory" to="Logic/CountrySelector" method="track_entry"]

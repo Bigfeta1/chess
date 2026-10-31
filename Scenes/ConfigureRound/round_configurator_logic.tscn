@@ -1,18 +1,30 @@
-[gd_scene load_steps=5 format=3 uid="uid://npx0iqhuoq01"]
+[gd_scene load_steps=8 format=3 uid="uid://npx0iqhuoq01"]
 
 [ext_resource type="Script" uid="uid://cge8x3l1wlgwv" path="res://Scripts/Logic/RoundConfigurator/round_configurator.gd" id="1_configurator"]
-[ext_resource type="Script" uid="uid://qiedale1eaet" path="res://Scripts/Logic/RoundConfigurator/create_country_manager_step.gd" id="2_step"]
 [ext_resource type="Script" uid="uid://ccwm60hvl6277" path="res://Scripts/Logic/RoundConfigurator/create_state_manager_step.gd" id="3_step"]
-[ext_resource type="Script" path="res://Scripts/Logic/RoundConfigurator/create_player_country_step.gd" id="4_step"]
+[ext_resource type="Script" path="res://Scripts/Logic/RoundConfigurator/create_board_manager_step.gd" id="4_board_step"]
+[ext_resource type="Script" path="res://Scripts/Logic/RoundConfigurator/create_player_manager_step.gd" id="5_player_step"]
+[ext_resource type="Script" path="res://Scripts/Logic/RoundConfigurator/add_players_to_turn_order_step.gd" id="6_turn_order_step"]
+[ext_resource type="Script" path="res://Scripts/Logic/RoundConfigurator/create_pieces_step.gd" id="7_pieces_step"]
+[ext_resource type="Script" path="res://Scripts/Logic/RoundConfigurator/create_selection_manager_step.gd" id="8_selection_step"]
 
 [node name="RoundConfigurator" type="Node"]
 script = ExtResource("1_configurator")
 
-[node name="CreateCountryManager" type="Node" parent="."]
-script = ExtResource("2_step")
-
 [node name="CreateStateManager" type="Node" parent="."]
 script = ExtResource("3_step")
 
-[node name="CreatePlayerCountry" type="Node" parent="."]
-script = ExtResource("4_step")
+[node name="CreateBoardManager" type="Node" parent="."]
+script = ExtResource("4_board_step")
+
+[node name="CreatePlayerManager" type="Node" parent="."]
+script = ExtResource("5_player_step")
+
+[node name="CreatePieces" type="Node" parent="."]
+script = ExtResource("7_pieces_step")
+
+[node name="AddPlayersToTurnOrder" type="Node" parent="."]
+script = ExtResource("6_turn_order_step")
+
+[node name="CreateSelectionManager" type="Node" parent="."]
+script = ExtResource("8_selection_step")

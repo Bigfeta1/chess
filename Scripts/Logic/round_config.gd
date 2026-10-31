@@ -1,22 +1,15 @@
 extends Node
 
-const COUNTRY_DIR = "res://Data/Country_Data/"
+# Holds the choices made on the round config panel.
+# Panel controls write here; configurator steps read from here.
+var settings := {}
 
-var country_files := []
-var player_country_id := ""
+func set_setting(key: String, value) -> void:
+	settings[key] = value
 
-func _ready() -> void:
-	country_files = find_country_files()
-	country_files.sort()
+func get_setting(key: String, default = null):
+	return settings.get(key, default)
 
-func select_country(country_id: String) -> void:
-	player_country_id = country_id
-
-static func find_country_files() -> Array:
-	var files := []
-
-	for file_name in DirAccess.get_files_at(COUNTRY_DIR):
-		if file_name.ends_with(".json"):
-			files.append(COUNTRY_DIR + file_name)
-
-	return files
+# Override or extend to block BEGIN until required settings are chosen.
+func is_valid() -> bool:
+	return true

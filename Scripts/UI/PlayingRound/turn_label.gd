@@ -9,6 +9,7 @@ func _ready() -> void:
 func initialize(turn_mngr):
 	turn_manager = turn_mngr
 	turn_manager.turn_changed.connect(draw_text)
+	draw_text(turn_manager.get_current_player())
 
 func draw_text(new_turn):
 	if turn_manager != null:

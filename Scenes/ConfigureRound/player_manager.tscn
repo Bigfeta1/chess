@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bajpk4auqwy8t"]
+
+[ext_resource type="Script" uid="uid://0fplxb5xm6lj" path="res://Scripts/Logic/PlayingRound/Players/player_manager.gd" id="1_players"]
+
+[node name="PlayerManager" type="Node"]
+script = ExtResource("1_players")

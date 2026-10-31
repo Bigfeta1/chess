@@ -1,9 +1,9 @@
 extends Node
 
 enum RoundPhase {
-	ECONOMIC_PHASE,
-	PROXY_WAR_PHASE,
-	UPKEEP_PHASE,
+	START_PHASE,
+	MAIN_PHASE,
+	END_PHASE,
 	STANDBY
 }
 

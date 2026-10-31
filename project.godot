@@ -10,7 +10,7 @@ config_version=5
 
 [application]
 
-config/name="Politics"
+config/name="Chess"
 run/main_scene="uid://bb5m6fn8raaa5"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
@@ -18,3 +18,8 @@ config/icon="res://icon.svg"
 [autoload]
 
 GameState="*res://Scripts/Autoload/game_state.gd"
+
+[rendering]
+
+anti_aliasing/quality/msaa_3d=2
+anti_aliasing/quality/use_taa=true

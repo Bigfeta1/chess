@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://cngo4qtjt0spd" path="res://Scripts/MainScene/main_scene.gd" id="1_x6ack"]
 [ext_resource type="Script" uid="uid://vqyt2am72j8j" path="res://Scripts/Logic/state_router.gd" id="3_b48ew"]
-[ext_resource type="Script" path="res://Scripts/MainScene/logic.gd" id="4_logic"]
+[ext_resource type="Script" uid="uid://b8ssa1l3bgxb4" path="res://Scripts/MainScene/logic.gd" id="4_logic"]
 
 [node name="MainScene" type="Node"]
 script = ExtResource("1_x6ack")
@@ -20,5 +20,6 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 
-[node name="Node3D" type="Node3D" parent="."]
+[node name="3D" type="Node3D" parent="."]

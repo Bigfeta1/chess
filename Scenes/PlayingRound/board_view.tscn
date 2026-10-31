@@ -1,0 +1,19 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://Scripts/World/PlayingRound/board_view.gd" id="1_board_view"]
+[ext_resource type="Script" path="res://Scripts/World/PlayingRound/board_input.gd" id="2_board_input"]
+
+[node name="BoardView" type="Node3D"]
+script = ExtResource("1_board_view")
+
+[node name="Squares" type="Node3D" parent="."]
+
+[node name="Pieces" type="Node3D" parent="."]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+current = true
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+
+[node name="BoardInput" type="Node" parent="."]
+script = ExtResource("2_board_input")

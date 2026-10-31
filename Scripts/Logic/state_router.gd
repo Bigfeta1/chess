@@ -26,6 +26,10 @@ var playing_round_logic = preload("res://Scenes/PlayingRound/playing_round_logic
 var playing_round_ui_instance = null
 var playing_round_ui = preload("res://Scenes/PlayingRound/playing_round_ui.tscn")
 
+var world
+var board_view_instance = null
+var board_view = preload("res://Scenes/PlayingRound/board_view.tscn")
+
 var state_manager
 var turn_manager
 var phase_manager
@@ -35,9 +39,10 @@ var phase_manager
 func _ready() -> void:
 	GameState.state_changed.connect(_on_state_changed)
 
-func initialize(logic_reference, ui_reference):
+func initialize(logic_reference, ui_reference, world_reference):
 	logic = logic_reference
 	ui = ui_reference
+	world = world_reference
 
 	_on_state_changed(GameState.current_state)
 
@@ -153,7 +158,7 @@ func create_playing_round():
 	var playing_round = playing_round_logic.instantiate()
 	logic.add_child(playing_round)
 	logic.register("playing_round", playing_round)
-	playing_round.initialize(logic.get_system("country_manager"))
+	playing_round.initialize(logic)
 
 	state_manager = logic.get_system("state_manager")
 	turn_manager = state_manager.turn_manager
@@ -164,8 +169,16 @@ func create_playing_round():
 
 	playing_round_ui_instance.initialize(state_manager, phase_manager, turn_manager)
 
+	board_view_instance = board_view.instantiate()
+	world.add_child(board_view_instance)
+	board_view_instance.initialize(logic.get_system("board_manager"), logic.get_system("selection_manager"))
+
 
 func destroy_playing_round():
+	if board_view_instance != null:
+		board_view_instance.queue_free()
+		board_view_instance = null
+
 	if playing_round_ui_instance == null:
 		return
 
