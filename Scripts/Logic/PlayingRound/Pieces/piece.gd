@@ -51,6 +51,11 @@ func get_threatened_squares(board_manager) -> Array:
 func get_companion_move(_target_square, _board_manager) -> Dictionary:
 	return {}
 
+# The piece captured by moving to target_square, or null. Usually whatever
+# stands on the target; the pawn overrides it for en passant.
+func get_captured_piece(target_square, _board_manager):
+	return target_square.piece
+
 # Shared helper for sliding pieces (bishop, rook, queen).
 # Walks from the piece's square along each direction (file step, rank step)
 # and collects every square up to and including the first occupied one.
@@ -86,25 +91,31 @@ func get_blocked_moves(board_manager) -> Array:
 
 # Whether this piece's king would be threatened after it moved to
 # target_square. The move is tried directly on the square links and undone;
-# no signals are emitted. A piece on target_square is treated as captured.
+# no signals are emitted. The captured piece (get_captured_piece) is taken
+# off its square while the move is tried; for en passant that is not the
+# target square.
 # For castling only the king is tried; can_castle already checks every
 # square the king stands on, crosses or lands on.
 func leaves_king_in_check(target_square, board_manager) -> bool:
 	var from_square = square
-	var captured = target_square.piece
+	var captured = get_captured_piece(target_square, board_manager)
+	var captured_square = null
 
-	from_square.piece = null
 	if captured != null:
+		captured_square = captured.square
+		captured_square.piece = null
 		captured.square = null
+	from_square.piece = null
 	target_square.piece = self
 	square = target_square
 
 	var in_check = board_manager.is_in_check(team)
 
 	square = from_square
+	target_square.piece = null
 	from_square.piece = self
-	target_square.piece = captured
 	if captured != null:
-		captured.square = target_square
+		captured_square.piece = captured
+		captured.square = captured_square
 
 	return in_check

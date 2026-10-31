@@ -13,6 +13,10 @@ var square_script = preload("res://Scripts/Logic/PlayingRound/Board/square.gd")
 
 var squares := {}
 
+# The square a pawn skipped with a two-square move on the last move, or null.
+# An enemy pawn may capture onto it (en passant) on the very next move only.
+var en_passant_square = null
+
 func _ready() -> void:
 	build_squares()
 
@@ -37,6 +41,13 @@ func place_piece(piece, notation: String) -> void:
 
 	square.piece = piece
 	piece.square = square
+
+# Called once per finished move. Remembers the square a pawn skipped with a
+# two-square move, so it can be captured en passant on the next move only.
+func record_move(piece, from_square, to_square) -> void:
+	en_passant_square = null
+	if piece.piece_type == Piece.PieceType.PAWN and absi(to_square.rank - from_square.rank) == 2:
+		en_passant_square = get_square_at(from_square.file, from_square.rank + signi(to_square.rank - from_square.rank))
 
 # Takes a piece off the board, clearing both sides of the link.
 func remove_piece(piece) -> void:

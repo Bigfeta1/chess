@@ -7,7 +7,7 @@ extends Node3D
 # Captured pieces line up beside the board: white's captures in front of
 # rank 1, black's behind rank 8, in the capturing player's captured order.
 # A promoted pawn's view is replaced by a view of the piece it became.
-# The tactical view (toggled by the tactical_view action, F5) tints every
+# The tactical view (toggled by the tactical_view action, Ctrl) tints every
 # square the current player's pieces threaten.
 # Square colours are layered: selection highlights, then tactical view
 # tints, then the plain light or dark colour.

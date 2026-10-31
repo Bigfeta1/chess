@@ -6,7 +6,7 @@ extends Node
 # under the mouse on the board surface (y = 0).
 
 signal square_clicked(square)
-# The tactical_view input action (F5 by default) was pressed.
+# The tactical_view input action (Ctrl by default) was pressed.
 signal tactical_view_toggled
 
 const RAY_LENGTH := 100.0

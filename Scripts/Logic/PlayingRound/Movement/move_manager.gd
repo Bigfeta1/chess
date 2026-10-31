@@ -31,7 +31,8 @@ func move_piece(piece, target_square) -> bool:
 	# Read before the piece moves: it depends on where the piece stands.
 	var companion = piece.get_companion_move(target_square, board_manager)
 
-	var captured_piece = target_square.piece
+	# Usually the piece on the target; for en passant, the pawn beside it.
+	var captured_piece = piece.get_captured_piece(target_square, board_manager)
 	var capturing_player = null
 	if captured_piece != null:
 		capturing_player = capture(piece, captured_piece)
@@ -45,6 +46,8 @@ func move_piece(piece, target_square) -> bool:
 	if not companion.is_empty():
 		place(companion.piece, companion.square)
 
+	# Before move_finished, so the game end check sees en passant moves.
+	board_manager.record_move(piece, from_square, target_square)
 	move_finished.emit(piece)
 	return true
 

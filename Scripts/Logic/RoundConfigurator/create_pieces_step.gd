@@ -42,15 +42,20 @@ func run(configurator):
 # TEMPORARY test position: [from, to] pairs applied after the normal setup.
 # Empty this list for a normal game.
 # Moved pieces count as moved (no pawn double step, no castling).
+# If the last move is a pawn's two-square move, it can be captured en passant.
 # Example (fool's mate, white checkmated at the start):
 # [["f2", "f3"], ["e7", "e5"], ["g2", "g4"], ["d8", "h4"]]
+# Example (white's e5 pawn can capture d5 en passant, landing on d6):
+# [["e2", "e5"], ["d7", "d5"]]
 const TEST_MOVES = []
 
 func apply_test_moves(board_manager) -> void:
 	for move in TEST_MOVES:
-		var piece = board_manager.get_square(move[0]).piece
+		var from_square = board_manager.get_square(move[0])
+		var piece = from_square.piece
 		board_manager.place_piece(piece, move[1])
 		piece.has_moved = true
+		board_manager.record_move(piece, from_square, board_manager.get_square(move[1]))
 
 func create_piece(type, player, board_manager, notation: String) -> void:
 	var piece = PieceFactory.create(type, player.team, notation)
